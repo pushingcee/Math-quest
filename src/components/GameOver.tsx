@@ -10,13 +10,24 @@ interface GameOverProps {
 export default function GameOver({ players, onPlayAgain }: GameOverProps) {
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
   const winner = sortedPlayers[0];
+  const isSinglePlayer = players.length === 1;
 
   return (
     <div className="rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 p-8 text-center text-white">
       <div className="mb-5 animate-pulse text-4xl font-bold">
-        🏆 {winner.name} Wins! 🏆
-        <br />
-        Final Score: {winner.score} points
+        {isSinglePlayer ? (
+          <>
+            🎯 Game Complete! 🎯
+            <br />
+            Final Score: {winner.score} points
+          </>
+        ) : (
+          <>
+            🏆 {winner.name} Wins! 🏆
+            <br />
+            Final Score: {winner.score} points
+          </>
+        )}
       </div>
       <div className="my-5 rounded-lg bg-white/20 p-5 backdrop-blur-sm">
         {sortedPlayers.map((player, index) => (

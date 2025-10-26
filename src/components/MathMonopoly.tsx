@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Player, MathProblem, TileData, GameScreen } from '@/types/game';
+import { ImportedProblemsData, ImportedProblem } from '@/types/imported-problems';
 import { playerColors } from './PlayerSprites';
 import GameSetup from './GameSetup';
 import Board from './Board';
@@ -28,6 +29,9 @@ export default function MathMonopoly() {
   const [movesInRound, setMovesInRound] = useState(0);
   const [playerPositions, setPlayerPositions] = useState<Map<number, { left: number; top: number }>>(new Map());
   const [movingPlayer, setMovingPlayer] = useState<number | null>(null);
+  const [importedProblems, setImportedProblems] = useState<ImportedProblemsData | null>(null);
+  const [problemPool, setProblemPool] = useState<ImportedProblem[]>([]);
+  const [usedProblemIds, setUsedProblemIds] = useState<Set<number>>(new Set());
 
   const boardRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -150,10 +154,49 @@ export default function MathMonopoly() {
     return { question: `${a} ${operation} ${b}`, answer };
   };
 
+  // Get next imported problem or generate random one
+  const getNextProblem = (difficulty: number): { question: string; answer: number } => {
+    // Use imported problems if available
+    if (importedProblems && problemPool.length > 0) {
+      // Get a random problem from the pool
+      const randomIndex = Math.floor(Math.random() * problemPool.length);
+      const importedProblem = problemPool[randomIndex];
+
+      // Remove from pool
+      const newPool = [...problemPool];
+      newPool.splice(randomIndex, 1);
+      setProblemPool(newPool);
+
+      // Add to used set
+      setUsedProblemIds(prev => new Set(prev).add(importedProblem.id));
+
+      // If pool is empty, refill it (excluding just-used problems for variety)
+      if (newPool.length === 0 && importedProblems.problems.length > 1) {
+        const availableProblems = importedProblems.problems.filter(
+          p => p.id !== importedProblem.id
+        );
+        setProblemPool([...availableProblems]);
+        console.log('Problem pool refilled');
+      }
+
+      // Parse answer as number
+      const answer = parseFloat(importedProblem.answer.trim());
+
+      console.log('Using imported problem:', importedProblem);
+      return {
+        question: importedProblem.question.trim(),
+        answer: isNaN(answer) ? 0 : answer
+      };
+    }
+
+    // Fall back to generated problems
+    return generateMathProblem(difficulty);
+  };
+
   // Show math problem
   const showMathProblem = (difficulty: number, points: number) => {
-    console.log('showMathProblem called', { difficulty, points });
-    const problem = generateMathProblem(difficulty);
+    console.log('showMathProblem called', { difficulty, points, hasImported: !!importedProblems });
+    const problem = getNextProblem(difficulty);
     const problemWithPoints = { ...problem, points };
     setMathProblem(problemWithPoints);
     setTimeLeft(10);
@@ -411,9 +454,23 @@ export default function MathMonopoly() {
   };
 
   // Start game
-  const startGame = (playerCount: number) => {
+  const startGame = (playerCount: number, problems?: ImportedProblemsData) => {
     initializePlayers(playerCount);
     createBoard();
+
+    // Set up imported problems if provided
+    if (problems) {
+      console.log('Starting game with imported problems:', problems);
+      setImportedProblems(problems);
+      setProblemPool([...problems.problems]);
+      setUsedProblemIds(new Set());
+    } else {
+      console.log('Starting game with generated problems');
+      setImportedProblems(null);
+      setProblemPool([]);
+      setUsedProblemIds(new Set());
+    }
+
     setScreen('playing');
     setCurrentPlayer(0);
     setRound(1);
@@ -432,6 +489,9 @@ export default function MathMonopoly() {
     setMathProblem(null);
     setMessage(null);
     setBannerMessage(null);
+    setImportedProblems(null);
+    setProblemPool([]);
+    setUsedProblemIds(new Set());
   };
 
   // Update positions when screen or tiles change (not on every player update)
