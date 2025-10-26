@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Monopoly</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .game-title {
+            font-size: 3em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .round-info {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .game-layout {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .board-section {
+            flex: 1;
+            min-width: 600px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            grid-template-rows: repeat(11, 1fr);
+            gap: 2px;
+            background: #2c3e50;
+            padding: 2px;
+            border-radius: 10px;
+            aspect-ratio: 1;
+            max-width: 750px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .tile {
+            background: white;
+            border: 1px solid #34495e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            padding: 5px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tile:hover {
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .corner-tile {
+            grid-column: span 2;
+            grid-row: span 2;
+            font-size: 0.9em;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .tile-value {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 3px;
+        }
+
+        .players-on-tile {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            display: flex;
+            gap: 2px;
+        }
+
+        .player-token {
+            width: 64px;
+            height: 64px;
+            position: absolute;
+            transition: left 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), 
+                        top 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 50;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+        }
+
+        .player-sprite {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            animation: idle 0.8s steps(2) infinite;
+        }
+
+        @keyframes idle {
+            0%, 50% { transform: translateY(0); }
+            25% { transform: translateY(-2px); }
+            75% { transform: translateY(1px); }
+        }
+
+        @keyframes bounce {
+            0% { 
+                transform: translateY(0) scale(1); 
+            }
+            30% { 
+                transform: translateY(-5px) scale(1.1, 0.9); 
+            }
+            50% { 
+                transform: translateY(-30px) scale(0.95, 1.15); 
+            }
+            70% { 
+                transform: translateY(-10px) scale(1.05, 0.95); 
+            }
+            100% { 
+                transform: translateY(0) scale(1); 
+            }
+        }
+
+        .player-token.moving .player-sprite {
+            animation: bounce 0.4s ease-in-out, idle 0.8s steps(2) infinite;
+        }
+
+        .info-section {
+            flex: 0 0 300px;
+        }
+
+        .players-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .players-row {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .player-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 3px solid #e0e0e0;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 150px;
+            max-width: 250px;
+            text-align: center;
+        }
+
+        .player-card.active {
+            border-color: #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            transform: scale(1.15) translateY(-10px);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            z-index: 10;
+        }
+
+        .player-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .player-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .player-stats {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .dice-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .dice {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #fff, #f8f9fa);
+            border: 4px solid #2c3e50;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4em;
+            font-weight: bold;
+            margin: 10px auto;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .dice:hover:not(.rolling) {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .dice.rolling {
+            animation: diceRoll 0.5s ease-in-out;
+            cursor: not-allowed;
+        }
+
+        @keyframes diceRoll {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(90deg) scale(1.2); }
+            50% { transform: rotate(180deg) scale(1); }
+            75% { transform: rotate(270deg) scale(1.2); }
+        }
+
+        .dice-label {
+            font-size: 1.1em;
+            color: #666;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .math-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .math-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .math-problem {
+            font-size: 2em;
+            margin: 20px 0;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .answer-input {
+            font-size: 1.5em;
+            padding: 10px;
+            width: 200px;
+            text-align: center;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .timer {
+            font-size: 1.2em;
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+
+        .game-over {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            color: white;
+        }
+
+        .winner-announcement {
+            font-size: 2em;
+            margin-bottom: 20px;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .final-scores {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .message {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">Math Monopoly</h1>
+            <div class="round-info">Round <span id="currentRound">1</span> of 10</div>
+        </div>
+
+        <div id="gameSetup">
+            <div style="text-align: center;">
+                <h2 style="margin-bottom: 20px;">Game Setup</h2>
+                <label style="display: block; margin-bottom: 10px; font-size: 1.2em;">
+                    Number of Players:
+                    <select id="playerCount" style="padding: 5px; font-size: 1.1em; margin-left: 10px;">
+                        <option value="2">2 Players</option>
+                        <option value="3">3 Players</option>
+                        <option value="4">4 Players</option>
+                    </select>
+                </label>
+                <button class="btn" onclick="startGame()">Start Game</button>
+            </div>
+        </div>
+
+        <div id="gameBoard" style="display: none;">
+            <div class="players-row" id="playersList"></div>
+            
+            <div class="game-layout">
+                <div class="board-section">
+                    <div class="board" id="board"></div>
+                </div>
+            </div>
+
+            <div class="dice-container">
+                <div class="dice" id="dice" onclick="rollDice()">🎲</div>
+                <div class="dice-label" id="diceLabel">Click to Roll!</div>
+            </div>
+            
+            <div id="message"></div>
+        </div>
+
+        <div id="gameOver" style="display: none;">
+            <div class="game-over">
+                <div class="winner-announcement" id="winnerText"></div>
+                <div class="final-scores" id="finalScores"></div>
+                <button class="btn" onclick="resetGame()">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="math-modal" id="mathModal">
+        <div class="modal-content">
+            <h2>Solve the Math Problem!</h2>
+            <div class="math-problem" id="mathProblem"></div>
+            <div class="timer">Time: <span id="timer">10</span>s</div>
+            <input type="number" class="answer-input" id="answerInput" placeholder="Your answer">
+            <button class="btn" onclick="submitAnswer()">Submit Answer</button>
+        </div>
+    </div>
+
+    <script>
+        let game = {
+            players: [],
+            currentPlayer: 0,
+            round: 1,
+            maxRounds: 10,
+            boardSize: 40,
+            tiles: [],
+            diceValue: 0,
+            mathProblem: null,
+            timerInterval: null,
+            movesInRound: 0,
+            playerColors: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'],
+            playerSprites: [
+                // Knight sprite (red)
+                `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="13" y="6" width="6" height="4" fill="#888"/>
+                    <rect x="12" y="10" width="8" height="6" fill="#e74c3c"/>
+                    <rect x="14" y="8" width="4" height="2" fill="#fdbcb4"/>
+                    <rect x="15" y="9" width="2" height="1" fill="#000"/>
+                    <rect x="11" y="16" width="10" height="8" fill="#666"/>
+                    <rect x="13" y="24" width="3" height="4" fill="#444"/>
+                    <rect x="17" y="24" width="3" height="4" fill="#444"/>
+                    <rect x="11" y="13" width="3" height="6" fill="#c0c0c0"/>
+                    <rect x="18" y="13" width="3" height="6" fill="#ffd700"/>
+                </svg>`,
+                // Wizard sprite (blue)
+                `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="16,4 12,12 20,12" fill="#3498db"/>
+                    <circle cx="16" cy="10" r="1" fill="#ffd700"/>
+                    <rect x="14" y="12" width="4" height="3" fill="#fdbcb4"/>
+                    <rect x="15" y="13" width="2" height="1" fill="#000"/>
+                    <rect x="11" y="15" width="10" height="10" fill="#3498db"/>
+                    <rect x="12" y="17" width="8" height="2" fill="#ffd700"/>
+                    <rect x="13" y="25" width="3" height="3" fill="#333"/>
+                    <rect x="17" y="25" width="3" height="3" fill="#333"/>
+                    <rect x="9" y="16" width="3" height="8" fill="#8b4513"/>
+                    <circle cx="10" cy="15" r="2" fill="#ff6b6b"/>
+                </svg>`,
+                // Archer sprite (green)  
+                `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="14" y="7" width="4" height="5" fill="#fdbcb4"/>
+                    <rect x="15" y="8" width="2" height="1" fill="#000"/>
+                    <rect x="13" y="6" width="6" height="3" fill="#2ecc71"/>
+                    <rect x="11" y="12" width="10" height="8" fill="#2ecc71"/>
+                    <rect x="13" y="20" width="3" height="6" fill="#8b4513"/>
+                    <rect x="17" y="20" width="3" height="6" fill="#8b4513"/>
+                    <rect x="8" y="13" width="6" height="2" fill="#8b4513"/>
+                    <rect x="6" y="12" width="2" height="4" fill="#666"/>
+                    <rect x="21" y="14" width="5" height="1" fill="#444"/>
+                    <circle cx="14" cy="6" r="1" fill="#ffd700"/>
+                </svg>`,
+                // Rogue sprite (orange)
+                `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="14" y="8" width="4" height="4" fill="#fdbcb4"/>
+                    <rect x="15" y="9" width="2" height="1" fill="#000"/>
+                    <rect x="13" y="6" width="6" height="4" fill="#333"/>
+                    <rect x="11" y="12" width="10" height="7" fill="#333"/>
+                    <rect x="11" y="19" width="10" height="5" fill="#f39c12"/>
+                    <rect x="13" y="24" width="3" height="4" fill="#333"/>
+                    <rect x="17" y="24" width="3" height="4" fill="#333"/>
+                    <rect x="21" y="14" width="4" height="2" fill="#c0c0c0"/>
+                    <rect x="25" y="13" width="1" height="4" fill="#c0c0c0"/>
+                    <polygon points="15,7 14,6 17,6 16,7" fill="#f39c12"/>
+                </svg>`
+            ]
+        };
+
+        function createBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            game.tiles = [];
+
+            // Create 40 tiles (Monopoly-style)
+            for (let i = 0; i < 40; i++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                
+                // Corner tiles
+                if (i === 0) {
+                    tile.className = 'corner-tile';
+                    tile.style.gridColumn = '10 / span 2';
+                    tile.style.gridRow = '10 / span 2';
+                    tile.innerHTML = 'START<br>+50pts';
+                } else if (i === 10) {
+                    tile.className = 'corner-tile';
+                    tile.style.gridColumn = '1 / span 2';
+                    tile.style.gridRow = '10 / span 2';
+                    tile.innerHTML = 'BONUS<br>×2pts';
+                } else if (i === 20) {
+                    tile.className = 'corner-tile';
+                    tile.style.gridColumn = '1 / span 2';
+                    tile.style.gridRow = '1 / span 2';
+                    tile.innerHTML = 'CHALLENGE<br>±100pts';
+                } else if (i === 30) {
+                    tile.className = 'corner-tile';
+                    tile.style.gridColumn = '10 / span 2';
+                    tile.style.gridRow = '1 / span 2';
+                    tile.innerHTML = 'PENALTY<br>-30pts';
+                } else {
+                    // Regular tiles
+                    let col, row;
+                    if (i < 10) { // Bottom row
+                        col = 10 - i;
+                        row = 11;
+                    } else if (i < 20) { // Left column
+                        col = 1;
+                        row = 11 - (i - 10);
+                    } else if (i < 30) { // Top row
+                        col = i - 20 + 1;
+                        row = 1;
+                    } else { // Right column
+                        col = 11;
+                        row = i - 30 + 1;
+                    }
+                    
+                    tile.style.gridColumn = col;
+                    tile.style.gridRow = row;
+                    
+                    const difficulty = Math.floor(Math.random() * 3) + 1;
+                    const points = difficulty * 10 + Math.floor(Math.random() * 20);
+                    tile.innerHTML = `<div>Math ${difficulty}</div><div class="tile-value">${points}pts</div>`;
+                    tile.dataset.difficulty = difficulty;
+                    tile.dataset.points = points;
+                }
+                
+                tile.dataset.index = i;
+                board.appendChild(tile);
+                game.tiles.push(tile);
+            }
+        }
+
+        function initializePlayers(count) {
+            game.players = [];
+            for (let i = 0; i < count; i++) {
+                game.players.push({
+                    id: i,
+                    name: `Player ${i + 1}`,
+                    position: 0,
+                    score: 0,
+                    color: game.playerColors[i]
+                });
+            }
+        }
+
+        function updatePlayersDisplay() {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '';
+            
+            game.players.forEach((player, index) => {
+                const playerCard = document.createElement('div');
+                playerCard.className = 'player-card' + (index === game.currentPlayer ? ' active' : '');
+                playerCard.innerHTML = `
+                    <div class="player-name">
+                        <span class="player-color" style="background: ${player.color}; width: 30px; height: 30px; border-radius: 50%; display: inline-block; margin-bottom: 10px;"></span>
+                        <div style="font-weight: bold; font-size: 1.2em; margin: 10px 0;">${player.name}</div>
+                    </div>
+                    <div class="player-stats">
+                        <div style="font-size: 1.4em; font-weight: bold; color: #667eea; margin: 5px 0;">${player.score} pts</div>
+                        <div style="font-size: 0.9em; color: #888;">Tile ${player.position + 1}</div>
+                    </div>
+                `;
+                playersList.appendChild(playerCard);
+            });
+        }
+
+        function updateBoard() {
+            // Clear all player tokens
+            document.querySelectorAll('.player-token').forEach(token => token.remove());
+            
+            // Add player tokens
+            game.players.forEach(player => {
+                const tile = game.tiles[player.position];
+                
+                const token = document.createElement('div');
+                token.className = 'player-token';
+                token.id = `player-${player.id}`;
+                
+                // Add sprite container
+                const sprite = document.createElement('div');
+                sprite.className = 'player-sprite';
+                sprite.innerHTML = game.playerSprites[player.id];
+                token.appendChild(sprite);
+                
+                // Position tokens within the tile
+                const rect = tile.getBoundingClientRect();
+                const boardRect = document.getElementById('board').getBoundingClientRect();
+                
+                // Calculate position relative to board with offset for multiple players
+                const otherPlayersOnTile = game.players.filter(p => 
+                    p.id < player.id && p.position === player.position
+                ).length;
+                
+                const offsetX = otherPlayersOnTile * 20 - 10;
+                const offsetY = otherPlayersOnTile * 8;
+                
+                const relativeLeft = rect.left - boardRect.left + rect.width/2 - 32 + offsetX;
+                const relativeTop = rect.top - boardRect.top + rect.height/2 - 32 + offsetY;
+                
+                token.style.left = relativeLeft + 'px';
+                token.style.top = relativeTop + 'px';
+                
+                document.getElementById('board').appendChild(token);
+            });
+        }
+
+        function rollDice() {
+            const dice = document.getElementById('dice');
+            const diceLabel = document.getElementById('diceLabel');
+            
+            // Prevent multiple rolls
+            if (dice.classList.contains('rolling')) return;
+            
+            dice.classList.add('rolling');
+            diceLabel.textContent = 'Rolling...';
+            
+            game.diceValue = Math.floor(Math.random() * 6) + 1;
+            
+            setTimeout(() => {
+                dice.textContent = game.diceValue;
+                dice.classList.remove('rolling');
+                diceLabel.textContent = `${game.players[game.currentPlayer].name} rolled ${game.diceValue}!`;
+                movePlayer();
+            }, 500);
+        }
+
+        function movePlayer() {
+            const player = game.players[game.currentPlayer];
+            const oldPosition = player.position;
+            const steps = game.diceValue;
+            let currentStep = 0;
+            
+            const moveInterval = setInterval(() => {
+                currentStep++;
+                
+                // Calculate new position for this step
+                const stepPosition = (oldPosition + currentStep) % game.boardSize;
+                
+                // Get the tile and token elements
+                const tile = game.tiles[stepPosition];
+                const token = document.getElementById(`player-${player.id}`);
+                
+                if (token && tile) {
+                    // Get positions
+                    const rect = tile.getBoundingClientRect();
+                    const boardRect = document.getElementById('board').getBoundingClientRect();
+                    
+                    // Calculate position relative to board with offset for multiple players
+                    const otherPlayersOnTile = game.players.filter(p => 
+                        p.id !== player.id && p.position === stepPosition
+                    ).length;
+                    
+                    const offsetX = otherPlayersOnTile * 15 - 7;
+                    const offsetY = otherPlayersOnTile * 5;
+                    
+                    const relativeLeft = rect.left - boardRect.left + rect.width/2 - 16 + offsetX;
+                    const relativeTop = rect.top - boardRect.top + rect.height/2 - 16 + offsetY;
+                    
+                    // Add bounce animation class
+                    token.classList.add('moving');
+                    
+                    // Move token
+                    token.style.left = relativeLeft + 'px';
+                    token.style.top = relativeTop + 'px';
+                    
+                    // Remove animation class after animation completes
+                    setTimeout(() => {
+                        token.classList.remove('moving');
+                    }, 400);
+                }
+                
+                if (currentStep >= steps) {
+                    clearInterval(moveInterval);
+                    
+                    // Update player's final position
+                    player.position = (oldPosition + steps) % game.boardSize;
+                    
+                    // Check if passed START
+                    if (player.position < oldPosition) {
+                        player.score += 50;
+                        showMessage('Passed START! +50 points!', 'success');
+                    }
+                    
+                    // Final update to ensure proper positioning
+                    setTimeout(() => {
+                        updateBoard();
+                        updatePlayersDisplay();
+                        handleTileLanding();
+                    }, 500);
+                }
+            }, 400); // Delay between each step
+        }
+
+        function handleTileLanding() {
+            const player = game.players[game.currentPlayer];
+            const tile = game.tiles[player.position];
+            const position = player.position;
+            
+            if (position === 0) {
+                showMessage('Landed on START! +50 points!', 'success');
+                player.score += 50;
+                nextTurn();
+            } else if (position === 10) {
+                showMessage('BONUS! Your next correct answer worth double!', 'success');
+                showMathProblem(2, 2);
+            } else if (position === 20) {
+                showMessage('CHALLENGE! High risk, high reward!', 'success');
+                showMathProblem(3, 100);
+            } else if (position === 30) {
+                showMessage('PENALTY! -30 points!', 'error');
+                player.score -= 30;
+                nextTurn();
+            } else {
+                const difficulty = parseInt(tile.dataset.difficulty);
+                const points = parseInt(tile.dataset.points);
+                showMathProblem(difficulty, points);
+            }
+            
+            updatePlayersDisplay();
+        }
+
+        function generateMathProblem(difficulty) {
+            let a, b, operation, answer;
+            
+            switch(difficulty) {
+                case 1: // Easy
+                    a = Math.floor(Math.random() * 20) + 1;
+                    b = Math.floor(Math.random() * 20) + 1;
+                    operation = Math.random() < 0.5 ? '+' : '-';
+                    answer = operation === '+' ? a + b : a - b;
+                    break;
+                case 2: // Medium
+                    a = Math.floor(Math.random() * 50) + 10;
+                    b = Math.floor(Math.random() * 30) + 5;
+                    const ops = ['+', '-', '×'];
+                    operation = ops[Math.floor(Math.random() * ops.length)];
+                    if (operation === '+') answer = a + b;
+                    else if (operation === '-') answer = a - b;
+                    else answer = a * b;
+                    break;
+                case 3: // Hard
+                    a = Math.floor(Math.random() * 100) + 20;
+                    b = Math.floor(Math.random() * 50) + 10;
+                    const hardOps = ['×', '÷'];
+                    operation = hardOps[Math.floor(Math.random() * hardOps.length)];
+                    if (operation === '×') {
+                        a = Math.floor(Math.random() * 20) + 5;
+                        b = Math.floor(Math.random() * 20) + 5;
+                        answer = a * b;
+                    } else {
+                        // Division - ensure clean division
+                        b = Math.floor(Math.random() * 10) + 2;
+                        answer = Math.floor(Math.random() * 20) + 5;
+                        a = b * answer;
+                    }
+                    break;
+            }
+            
+            return {
+                question: `${a} ${operation} ${b}`,
+                answer: answer
+            };
+        }
+
+        function showMathProblem(difficulty, points) {
+            game.mathProblem = generateMathProblem(difficulty);
+            game.mathProblem.points = points;
+            
+            document.getElementById('mathProblem').textContent = game.mathProblem.question + ' = ?';
+            document.getElementById('answerInput').value = '';
+            document.getElementById('mathModal').classList.add('active');
+            
+            let timeLeft = 10;
+            document.getElementById('timer').textContent = timeLeft;
+            
+            game.timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    submitAnswer(true);
+                }
+            }, 1000);
+            
+            document.getElementById('answerInput').focus();
+        }
+
+        function submitAnswer(timeout = false) {
+            clearInterval(game.timerInterval);
+            
+            const userAnswer = parseInt(document.getElementById('answerInput').value);
+            const correct = userAnswer === game.mathProblem.answer;
+            const player = game.players[game.currentPlayer];
+            
+            if (timeout) {
+                player.score -= game.mathProblem.points;
+                showMessage(`Time's up! The answer was ${game.mathProblem.answer}. -${game.mathProblem.points} points!`, 'error');
+            } else if (correct) {
+                player.score += game.mathProblem.points;
+                showMessage(`Correct! +${game.mathProblem.points} points!`, 'success');
+            } else {
+                player.score -= game.mathProblem.points;
+                showMessage(`Wrong! The answer was ${game.mathProblem.answer}. -${game.mathProblem.points} points!`, 'error');
+            }
+            
+            document.getElementById('mathModal').classList.remove('active');
+            updatePlayersDisplay();
+            nextTurn();
+        }
+
+        function nextTurn() {
+            game.movesInRound++;
+            
+            if (game.movesInRound >= game.players.length) {
+                game.round++;
+                game.movesInRound = 0;
+                document.getElementById('currentRound').textContent = game.round;
+                
+                if (game.round > game.maxRounds) {
+                    endGame();
+                    return;
+                }
+            }
+            
+            game.currentPlayer = (game.currentPlayer + 1) % game.players.length;
+            updatePlayersDisplay();
+            
+            // Update dice label for next player
+            const diceLabel = document.getElementById('diceLabel');
+            diceLabel.textContent = `${game.players[game.currentPlayer].name}'s turn - Click to Roll!`;
+            
+            // Reset dice display
+            document.getElementById('dice').textContent = '🎲';
+        }
+
+        function endGame() {
+            const winner = game.players.reduce((prev, current) => 
+                prev.score > current.score ? prev : current
+            );
+            
+            document.getElementById('gameBoard').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'block';
+            
+            document.getElementById('winnerText').innerHTML = 
+                `🏆 ${winner.name} Wins! 🏆<br>Final Score: ${winner.score} points`;
+            
+            const scoresHtml = game.players
+                .sort((a, b) => b.score - a.score)
+                .map((player, index) => 
+                    `<div style="margin: 10px 0; font-size: 1.2em;">
+                        ${index + 1}. ${player.name}: ${player.score} points
+                    </div>`
+                ).join('');
+            
+            document.getElementById('finalScores').innerHTML = scoresHtml;
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.className = 'message ' + type;
+            messageEl.textContent = text;
+            setTimeout(() => {
+                messageEl.className = '';
+                messageEl.textContent = '';
+            }, 3000);
+        }
+
+        function startGame() {
+            const playerCount = parseInt(document.getElementById('playerCount').value);
+            initializePlayers(playerCount);
+            createBoard();
+            updateBoard();
+            updatePlayersDisplay();
+            
+            document.getElementById('gameSetup').style.display = 'none';
+            document.getElementById('gameBoard').style.display = 'block';
+            
+            // Set initial dice label
+            document.getElementById('diceLabel').textContent = `${game.players[0].name}'s turn - Click to Roll!`;
+            
+            game.round = 1;
+            game.currentPlayer = 0;
+            game.movesInRound = 0;
+            document.getElementById('currentRound').textContent = game.round;
+        }
+
+        function resetGame() {
+            game = {
+                players: [],
+                currentPlayer: 0,
+                round: 1,
+                maxRounds: 10,
+                boardSize: 40,
+                tiles: [],
+                diceValue: 0,
+                mathProblem: null,
+                timerInterval: null,
+                movesInRound: 0,
+                playerColors: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12']
+            };
+            
+            document.getElementById('gameSetup').style.display = 'block';
+            document.getElementById('gameBoard').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // Handle Enter key for answer submission
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('answerInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && document.getElementById('mathModal').classList.contains('active')) {
+                    submitAnswer();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
