@@ -628,14 +628,6 @@ export default function MathQuest() {
           type={message?.type || 'success'}
           onClose={closeMessageModal}
         />
-        {/* Debug logging */}
-        {console.log('MessageModal condition:', {
-          messageNotNull: message !== null,
-          mathProblemNull: mathProblem === null,
-          isOpen: message !== null && mathProblem === null,
-          message,
-          mathProblem
-        })}
       </div>
     </div>
   );

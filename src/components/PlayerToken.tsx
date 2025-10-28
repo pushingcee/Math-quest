@@ -25,7 +25,6 @@ export default function PlayerToken({ player, left, top, isMoving }: PlayerToken
         className={`relative h-full w-full ${isMoving ? 'animate-bounce-token' : 'animate-idle'}`}
         style={{
           imageRendering: 'pixelated',
-          imageRendering: 'crisp-edges',
         } as React.CSSProperties}
         dangerouslySetInnerHTML={{ __html: playerSprites[player.id] }}
       />
