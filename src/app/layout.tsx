@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Math Monopoly",
-  description: "An educational board game combining Monopoly gameplay with math challenges",
+  title: "Math Quest",
+  description: "An educational board game combining quest-style gameplay with math challenges",
 };
 
 export default function RootLayout({

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
 
 interface GameSetupProps {
-  onStart: (playerCount: number, importedProblems?: ImportedProblemsData) => void;
+  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number) => void;
 }
 
 export default function GameSetup({ onStart }: GameSetupProps) {
@@ -12,6 +12,9 @@ export default function GameSetup({ onStart }: GameSetupProps) {
   const [importedProblems, setImportedProblems] = useState<ImportedProblemsData | null>(null);
   const [fileName, setFileName] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [negativePoints, setNegativePoints] = useState(true);
+  const [timerEnabled, setTimerEnabled] = useState(false);
+  const [timerValue, setTimerValue] = useState(30);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -51,7 +54,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
   };
 
   const handleStart = () => {
-    onStart(playerCount, importedProblems || undefined);
+    onStart(playerCount, importedProblems || undefined, negativePoints, timerEnabled, timerValue);
   };
 
   return (
@@ -70,6 +73,44 @@ export default function GameSetup({ onStart }: GameSetupProps) {
           <option value={4}>4 Players</option>
         </select>
       </label>
+
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <label className="flex cursor-pointer items-center gap-2 text-lg text-black">
+          <input
+            type="checkbox"
+            checked={negativePoints}
+            onChange={(e) => setNegativePoints(e.target.checked)}
+            className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
+          />
+          <span className="font-medium">Enable Negative Points</span>
+        </label>
+      </div>
+
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <label className="flex cursor-pointer items-center gap-2 text-lg text-black">
+          <input
+            type="checkbox"
+            checked={timerEnabled}
+            onChange={(e) => setTimerEnabled(e.target.checked)}
+            className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
+          />
+          <span className="font-medium">Enable Timer</span>
+        </label>
+        <input
+          type="number"
+          value={timerValue}
+          onChange={(e) => setTimerValue(parseInt(e.target.value) || 30)}
+          disabled={!timerEnabled}
+          min={5}
+          max={300}
+          className={`w-20 rounded-lg border-2 px-3 py-1.5 text-center text-lg transition-all focus:outline-none focus:ring-2 ${
+            timerEnabled
+              ? 'border-purple-500 text-black focus:border-purple-600 focus:ring-purple-500/20'
+              : 'cursor-not-allowed border-gray-300 bg-gray-100 text-gray-400'
+          }`}
+        />
+        <span className="text-lg text-black">seconds</span>
+      </div>
 
       <div className="mt-6 rounded-lg border-2 border-dashed border-purple-300 bg-purple-50 p-4">
         <label className="block text-lg font-semibold text-black mb-2">

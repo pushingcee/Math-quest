@@ -1,5 +1,5 @@
-import MathMonopoly from '@/components/MathMonopoly';
+import MathQuest from '@/components/MathQuest';
 
 export default function Home() {
-  return <MathMonopoly />;
+  return <MathQuest />;
 }

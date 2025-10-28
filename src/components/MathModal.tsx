@@ -1,22 +1,53 @@
 'use client';
 
-import { useState, useEffect, KeyboardEvent } from 'react';
+import { useState, useEffect, useRef, KeyboardEvent } from 'react';
+import renderMathInElement from 'katex/contrib/auto-render';
+import 'katex/dist/katex.min.css';
+import { convertMathToLatex } from '@/utils/mathToLatex';
 
 interface MathModalProps {
   isOpen: boolean;
   problem: string;
   timeLeft: number;
   onSubmit: (answer: number) => void;
+  timerEnabled?: boolean;
 }
 
-export default function MathModal({ isOpen, problem, timeLeft, onSubmit }: MathModalProps) {
+export default function MathModal({ isOpen, problem, timeLeft, onSubmit, timerEnabled = true }: MathModalProps) {
   const [answer, setAnswer] = useState('');
+  const mathRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setAnswer('');
     }
   }, [isOpen]);
+
+  // Render math with KaTeX auto-render
+  useEffect(() => {
+    if (mathRef.current && problem) {
+      // Convert plain math to LaTeX and wrap in delimiters
+      const latexExpression = convertMathToLatex(problem);
+      const displayText = `$${latexExpression}$`;
+
+      // Set the text content first
+      mathRef.current.textContent = displayText;
+
+      try {
+        // Auto-render will find $...$ and $$...$$ delimiters and render them
+        renderMathInElement(mathRef.current, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+          ],
+          throwOnError: false,
+        });
+      } catch (error) {
+        console.error('KaTeX rendering error:', error);
+        // Text content is already set, so it will just show as plain text
+      }
+    }
+  }, [problem]);
 
   const handleSubmit = () => {
     if (answer) {
@@ -36,12 +67,15 @@ export default function MathModal({ isOpen, problem, timeLeft, onSubmit }: MathM
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="w-[90%] max-w-[500px] animate-slide-in rounded-2xl bg-white p-10 text-center">
         <h2 className="mb-5 text-2xl font-bold text-black">Solve the Math Problem!</h2>
-        <div className="my-5 text-4xl font-bold text-black">
-          {problem} = ?
+        <div className="my-5 flex items-center justify-center gap-2 text-2xl font-bold text-black">
+          <div ref={mathRef}></div>
+          <span>= ?</span>
         </div>
-        <div className="my-2.5 text-xl text-red-500">
-          Time: <span id="timer">{timeLeft}</span>s
-        </div>
+        {timerEnabled && (
+          <div className="my-2.5 text-xl text-red-500">
+            Time: <span id="timer">{timeLeft}</span>s
+          </div>
+        )}
         <input
           type="number"
           value={answer}

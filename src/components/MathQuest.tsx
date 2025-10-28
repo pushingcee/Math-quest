@@ -13,7 +13,7 @@ import MathModal from './MathModal';
 import MessageModal from './MessageModal';
 import GameOver from './GameOver';
 
-export default function MathMonopoly() {
+export default function MathQuest() {
   const [screen, setScreen] = useState<GameScreen>('setup');
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState(0);
@@ -32,6 +32,9 @@ export default function MathMonopoly() {
   const [importedProblems, setImportedProblems] = useState<ImportedProblemsData | null>(null);
   const [problemPool, setProblemPool] = useState<ImportedProblem[]>([]);
   const [usedProblemIds, setUsedProblemIds] = useState<Set<number>>(new Set());
+  const [negativePointsEnabled, setNegativePointsEnabled] = useState(true);
+  const [timerEnabled, setTimerEnabled] = useState(false);
+  const [timerDuration, setTimerDuration] = useState(30);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -111,7 +114,7 @@ export default function MathMonopoly() {
     setPlayerPositions(newPositions);
   }, [players]);
 
-  // Generate math problem
+  // Generate math problem (returns plain text, will be converted to LaTeX by MathModal)
   const generateMathProblem = (difficulty: number): { question: string; answer: number } => {
     let a: number, b: number, operation: string, answer: number;
 
@@ -125,16 +128,16 @@ export default function MathMonopoly() {
       case 2: // Medium
         a = Math.floor(Math.random() * 50) + 10;
         b = Math.floor(Math.random() * 30) + 5;
-        const ops = ['+', '-', '×'];
+        const ops = ['+', '-', '*'];
         operation = ops[Math.floor(Math.random() * ops.length)];
         if (operation === '+') answer = a + b;
         else if (operation === '-') answer = a - b;
         else answer = a * b;
         break;
       case 3: // Hard
-        const hardOps = ['×', '÷'];
+        const hardOps = ['*', '/'];
         operation = hardOps[Math.floor(Math.random() * hardOps.length)];
-        if (operation === '×') {
+        if (operation === '*') {
           a = Math.floor(Math.random() * 20) + 5;
           b = Math.floor(Math.random() * 20) + 5;
           answer = a * b;
@@ -199,33 +202,36 @@ export default function MathMonopoly() {
     const problem = getNextProblem(difficulty);
     const problemWithPoints = { ...problem, points };
     setMathProblem(problemWithPoints);
-    setTimeLeft(10);
+    setTimeLeft(timerEnabled ? timerDuration : 0);
 
     // Clear any existing timer first
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
 
-    // Capture the problem answer and points for the timer closure
-    const capturedAnswer = problemWithPoints.answer;
-    const capturedPoints = problemWithPoints.points;
+    // Only start timer if enabled
+    if (timerEnabled) {
+      // Capture the problem answer and points for the timer closure
+      const capturedAnswer = problemWithPoints.answer;
+      const capturedPoints = problemWithPoints.points;
 
-    // Start timer
-    let time = 10;
-    timerIntervalRef.current = setInterval(() => {
-      time--;
-      setTimeLeft(time);
-      console.log('Timer tick:', time);
-      if (time <= 0) {
-        console.log('Timer expired, submitting answer as wrong');
-        if (timerIntervalRef.current) {
-          clearInterval(timerIntervalRef.current);
-          timerIntervalRef.current = null;
+      // Start timer
+      let time = timerDuration;
+      timerIntervalRef.current = setInterval(() => {
+        time--;
+        setTimeLeft(time);
+        console.log('Timer tick:', time);
+        if (time <= 0) {
+          console.log('Timer expired, submitting answer as wrong');
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+          }
+          // Call submitAnswerTimeout with captured values
+          submitAnswerTimeout(capturedAnswer, capturedPoints);
         }
-        // Call submitAnswerTimeout with captured values
-        submitAnswerTimeout(capturedAnswer, capturedPoints);
-      }
-    }, 1000);
+      }, 1000);
+    }
   };
 
   // Handle timeout separately to avoid closure issues
@@ -235,19 +241,23 @@ export default function MathMonopoly() {
     // Close math modal
     setMathProblem(null);
 
-    // Update score
-    setPlayers((prevPlayers) => {
-      const newPlayers = [...prevPlayers];
-      newPlayers[currentPlayer] = {
-        ...newPlayers[currentPlayer],
-        score: newPlayers[currentPlayer].score - points,
-      };
-      return newPlayers;
-    });
+    // Update score (only deduct if negative points enabled)
+    if (negativePointsEnabled) {
+      setPlayers((prevPlayers) => {
+        const newPlayers = [...prevPlayers];
+        newPlayers[currentPlayer] = {
+          ...newPlayers[currentPlayer],
+          score: newPlayers[currentPlayer].score - points,
+        };
+        return newPlayers;
+      });
+    }
 
     // Show timeout message
     setMessage({
-      text: `⏰ You ran out of time! The correct answer was ${correctAnswer}. -${points} points!`,
+      text: negativePointsEnabled
+        ? `⏰ You ran out of time! The correct answer was ${correctAnswer}. -${points} points!`
+        : `⏰ You ran out of time! The correct answer was ${correctAnswer}.`,
       type: 'error'
     });
     console.log('Timeout message set');
@@ -289,16 +299,21 @@ export default function MathMonopoly() {
         type: 'success'
       });
     } else {
-      setPlayers((prevPlayers) => {
-        const newPlayers = [...prevPlayers];
-        newPlayers[currentPlayer] = {
-          ...newPlayers[currentPlayer],
-          score: newPlayers[currentPlayer].score - points,
-        };
-        return newPlayers;
-      });
+      // Only deduct points if negative points enabled
+      if (negativePointsEnabled) {
+        setPlayers((prevPlayers) => {
+          const newPlayers = [...prevPlayers];
+          newPlayers[currentPlayer] = {
+            ...newPlayers[currentPlayer],
+            score: newPlayers[currentPlayer].score - points,
+          };
+          return newPlayers;
+        });
+      }
       setMessage({
-        text: `The answer was ${answer}. -${points} points!`,
+        text: negativePointsEnabled
+          ? `The answer was ${answer}. -${points} points!`
+          : `The answer was ${answer}.`,
         type: 'error'
       });
     }
@@ -338,15 +353,19 @@ export default function MathMonopoly() {
       showMessage('CHALLENGE! High risk, high reward!', 'success');
       showMathProblem(3, 100);
     } else if (position === 30) {
-      showMessage('PENALTY! -30 points!', 'error');
-      setPlayers((prevPlayers) => {
-        const newPlayers = [...prevPlayers];
-        newPlayers[playerId] = {
-          ...newPlayers[playerId],
-          score: newPlayers[playerId].score - 30,
-        };
-        return newPlayers;
-      });
+      if (negativePointsEnabled) {
+        showMessage('PENALTY! -30 points!', 'error');
+        setPlayers((prevPlayers) => {
+          const newPlayers = [...prevPlayers];
+          newPlayers[playerId] = {
+            ...newPlayers[playerId],
+            score: newPlayers[playerId].score - 30,
+          };
+          return newPlayers;
+        });
+      } else {
+        showMessage('PENALTY! (No points deducted)', 'error');
+      }
       nextTurn();
     } else {
       const tile = tiles[position];
@@ -454,7 +473,13 @@ export default function MathMonopoly() {
   };
 
   // Start game
-  const startGame = (playerCount: number, problems?: ImportedProblemsData) => {
+  const startGame = (
+    playerCount: number,
+    problems?: ImportedProblemsData,
+    negativePoints?: boolean,
+    enableTimer?: boolean,
+    timerValue?: number
+  ) => {
     initializePlayers(playerCount);
     createBoard();
 
@@ -470,6 +495,13 @@ export default function MathMonopoly() {
       setProblemPool([]);
       setUsedProblemIds(new Set());
     }
+
+    // Set negative points setting (default to true if not specified)
+    setNegativePointsEnabled(negativePoints !== undefined ? negativePoints : true);
+
+    // Set timer settings
+    setTimerEnabled(enableTimer !== undefined ? enableTimer : false);
+    setTimerDuration(timerValue !== undefined ? timerValue : 30);
 
     setScreen('playing');
     setCurrentPlayer(0);
@@ -517,7 +549,7 @@ export default function MathMonopoly() {
       <div className="w-full max-w-6xl rounded-2xl bg-white/95 p-8 shadow-2xl">
         <div className="mb-8 text-center">
           <h1 className="mb-2.5 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-5xl font-bold text-transparent">
-            Math Monopoly
+            Math Quest
           </h1>
           {screen === 'playing' && (
             <div className="text-xl font-semibold text-black">
@@ -587,6 +619,7 @@ export default function MathMonopoly() {
           problem={mathProblem?.question || ''}
           timeLeft={timeLeft}
           onSubmit={submitAnswer}
+          timerEnabled={timerEnabled}
         />
 
         <MessageModal

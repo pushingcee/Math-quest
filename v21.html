@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Monopoly</title>
+    <title>Math Quest</title>
     <style>
         * {
             margin: 0;
@@ -424,7 +424,7 @@
 <body>
     <div class="game-container">
         <div class="game-header">
-            <h1 class="game-title">Math Monopoly</h1>
+            <h1 class="game-title">Math Quest</h1>
             <div class="round-info">Round <span id="currentRound">1</span> of 10</div>
         </div>
 
@@ -552,7 +552,7 @@
             board.innerHTML = '';
             game.tiles = [];
 
-            // Create 40 tiles (Monopoly-style)
+            // Create 40 tiles (board game style)
             for (let i = 0; i < 40; i++) {
                 const tile = document.createElement('div');
                 tile.className = 'tile';
