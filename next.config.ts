@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   output: 'export',
   // GitHub Pages serves from /<repo-name>/ - update this to match your repo name
   // If deploying to username.github.io, set basePath to ''
-  basePath: process.env.NODE_ENV === 'production' ? '/board-game' : '',
+  basePath: process.env.NODE_ENV === 'production' ? '/Math-quest' : '',
   images: {
     unoptimized: true,
   },
