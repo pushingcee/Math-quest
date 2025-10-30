@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { TileData } from '@/types/game';
+import renderMathInElement from 'katex/contrib/auto-render';
+import 'katex/dist/katex.min.css';
+import { convertMathToLatex } from '@/utils/mathToLatex';
 
 interface BoardProps {
   tiles: TileData[];
@@ -26,7 +29,29 @@ export default function Board({ tiles, children }: BoardProps) {
 }
 
 function Tile({ tile }: { tile: TileData }) {
-  const { index, difficulty, points, type, label } = tile;
+  const { index, difficulty, points, type, label, question } = tile;
+  const mathRef = useRef<HTMLDivElement>(null);
+
+  // Render math with KaTeX
+  useEffect(() => {
+    if (mathRef.current && question) {
+      const latexExpression = convertMathToLatex(question);
+      const displayText = `$${latexExpression}$`;
+      mathRef.current.textContent = displayText;
+
+      try {
+        renderMathInElement(mathRef.current, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+          ],
+          throwOnError: false,
+        });
+      } catch (error) {
+        console.error('KaTeX rendering error:', error);
+      }
+    }
+  }, [question]);
 
   const getGridPosition = () => {
     if (index === 0) {
@@ -79,10 +104,12 @@ function Tile({ tile }: { tile: TileData }) {
       data-difficulty={difficulty}
       data-points={points}
       style={position}
-      className="relative flex cursor-pointer flex-col items-center justify-center border border-slate-600 bg-white p-1 text-center text-xs transition-all hover:z-10 hover:scale-105 hover:shadow-lg"
+      className="relative flex cursor-pointer flex-col items-center justify-center border border-slate-600 bg-white p-0.5 text-center text-xs transition-all hover:z-10 hover:scale-105 hover:shadow-lg"
     >
-      <div className="text-[0.65rem] text-black sm:text-xs">Math {difficulty}</div>
-      <div className="mt-0.5 text-[0.65rem] font-bold text-black sm:text-xs">
+      <div ref={mathRef} className="text-[0.6rem] text-black sm:text-xs leading-tight">
+        {question}
+      </div>
+      <div className="mt-0.5 text-[0.55rem] font-bold text-purple-600 sm:text-[0.65rem]">
         {points}pts
       </div>
     </div>

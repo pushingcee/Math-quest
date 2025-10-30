@@ -4,6 +4,7 @@ export interface Player {
   position: number;
   score: number;
   color: string;
+  streak?: number;
 }
 
 export interface MathProblem {
@@ -31,4 +32,6 @@ export interface TileData {
   points?: number;
   type: 'corner' | 'regular';
   label?: string;
+  question?: string;
+  answer?: number;
 }

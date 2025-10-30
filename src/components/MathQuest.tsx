@@ -38,12 +38,19 @@ export default function MathQuest() {
 
   const boardRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const diceAudioRef = useRef<HTMLAudioElement[]>([]);
+  const yayAudioRef = useRef<HTMLAudioElement[]>([]);
+  const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
   const maxRounds = 10;
   const boardSize = 40;
 
   // Create board tiles
-  const createBoard = useCallback(() => {
+  const createBoard = useCallback((problems?: ImportedProblemsData) => {
     const newTiles: TileData[] = [];
+
+    // Create a pool of imported problems if available
+    let problemsPool = problems ? [...problems.problems] : [];
+
     for (let i = 0; i < 40; i++) {
       if (i === 0) {
         newTiles.push({ index: i, type: 'corner', label: 'START<br>+50pts' });
@@ -56,7 +63,35 @@ export default function MathQuest() {
       } else {
         const difficulty = Math.floor(Math.random() * 3) + 1;
         const points = difficulty * 10 + Math.floor(Math.random() * 20);
-        newTiles.push({ index: i, type: 'regular', difficulty, points });
+
+        let problem;
+        // Use imported problem if available, otherwise generate random one
+        if (problemsPool.length > 0) {
+          const randomIndex = Math.floor(Math.random() * problemsPool.length);
+          const importedProblem = problemsPool[randomIndex];
+          problemsPool.splice(randomIndex, 1);
+
+          // If pool is empty, refill it
+          if (problemsPool.length === 0 && problems) {
+            problemsPool = [...problems.problems];
+          }
+
+          problem = {
+            question: importedProblem.question.trim(),
+            answer: parseFloat(importedProblem.answer.trim())
+          };
+        } else {
+          problem = generateMathProblem(difficulty);
+        }
+
+        newTiles.push({
+          index: i,
+          type: 'regular',
+          difficulty,
+          points,
+          question: problem.question,
+          answer: problem.answer
+        });
       }
     }
     console.log('Created tiles:', newTiles.slice(0, 5)); // Log first 5 tiles
@@ -73,6 +108,7 @@ export default function MathQuest() {
         position: 0,
         score: 0,
         color: playerColors[i],
+        streak: 0,
       });
     }
     setPlayers(newPlayers);
@@ -197,9 +233,17 @@ export default function MathQuest() {
   };
 
   // Show math problem
-  const showMathProblem = (difficulty: number, points: number) => {
-    console.log('showMathProblem called', { difficulty, points, hasImported: !!importedProblems });
-    const problem = getNextProblem(difficulty);
+  const showMathProblem = (difficulty: number, points: number, question?: string, answer?: number) => {
+    console.log('showMathProblem called', { difficulty, points, question, answer, hasImported: !!importedProblems });
+
+    // Use provided question/answer if available, otherwise generate new one
+    let problem;
+    if (question !== undefined && answer !== undefined) {
+      problem = { question, answer };
+    } else {
+      problem = getNextProblem(difficulty);
+    }
+
     const problemWithPoints = { ...problem, points };
     setMathProblem(problemWithPoints);
     setTimeLeft(timerEnabled ? timerDuration : 0);
@@ -241,17 +285,18 @@ export default function MathQuest() {
     // Close math modal
     setMathProblem(null);
 
-    // Update score (only deduct if negative points enabled)
-    if (negativePointsEnabled) {
-      setPlayers((prevPlayers) => {
-        const newPlayers = [...prevPlayers];
-        newPlayers[currentPlayer] = {
-          ...newPlayers[currentPlayer],
-          score: newPlayers[currentPlayer].score - points,
-        };
-        return newPlayers;
-      });
-    }
+    // Reset streak and update score (only deduct if negative points enabled)
+    setPlayers((prevPlayers) => {
+      const newPlayers = [...prevPlayers];
+      newPlayers[currentPlayer] = {
+        ...newPlayers[currentPlayer],
+        score: negativePointsEnabled
+          ? newPlayers[currentPlayer].score - points
+          : newPlayers[currentPlayer].score,
+        streak: 0,
+      };
+      return newPlayers;
+    });
 
     // Show timeout message
     setMessage({
@@ -286,12 +331,31 @@ export default function MathQuest() {
 
     // Update score and show result modal
     if (correct) {
+      // Play chime sound with random pitch shift on every correct answer
+      if (chimeAudioRef.current) {
+        const chime = chimeAudioRef.current.cloneNode() as HTMLAudioElement;
+        chime.playbackRate = 0.95 + Math.random() * 0.1; // Random rate between 0.95 and 1.05
+        chime.play().catch(e => console.log('Audio play failed:', e));
+      }
+
       setPlayers((prevPlayers) => {
         const newPlayers = [...prevPlayers];
+        const newStreak = (newPlayers[currentPlayer].streak || 0) + 1;
+
         newPlayers[currentPlayer] = {
           ...newPlayers[currentPlayer],
           score: newPlayers[currentPlayer].score + points,
+          streak: newStreak,
         };
+
+        // Play random yay sound only if streak >= 3
+        if (newStreak >= 3 && yayAudioRef.current.length > 0) {
+          const randomIndex = Math.floor(Math.random() * yayAudioRef.current.length);
+          const audio = yayAudioRef.current[randomIndex];
+          audio.currentTime = 0;
+          audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+
         return newPlayers;
       });
       setMessage({
@@ -299,17 +363,18 @@ export default function MathQuest() {
         type: 'success'
       });
     } else {
-      // Only deduct points if negative points enabled
-      if (negativePointsEnabled) {
-        setPlayers((prevPlayers) => {
-          const newPlayers = [...prevPlayers];
-          newPlayers[currentPlayer] = {
-            ...newPlayers[currentPlayer],
-            score: newPlayers[currentPlayer].score - points,
-          };
-          return newPlayers;
-        });
-      }
+      // Reset streak and deduct points if enabled
+      setPlayers((prevPlayers) => {
+        const newPlayers = [...prevPlayers];
+        newPlayers[currentPlayer] = {
+          ...newPlayers[currentPlayer],
+          score: negativePointsEnabled
+            ? newPlayers[currentPlayer].score - points
+            : newPlayers[currentPlayer].score,
+          streak: 0,
+        };
+        return newPlayers;
+      });
       setMessage({
         text: negativePointsEnabled
           ? `The answer was ${answer}. -${points} points!`
@@ -348,9 +413,11 @@ export default function MathQuest() {
       nextTurn();
     } else if (position === 10) {
       showMessage('BONUS! Your next correct answer worth double!', 'success');
+      // Corner tiles generate new problems each time
       showMathProblem(2, 2);
     } else if (position === 20) {
       showMessage('CHALLENGE! High risk, high reward!', 'success');
+      // Corner tiles generate new problems each time
       showMathProblem(3, 100);
     } else if (position === 30) {
       if (negativePointsEnabled) {
@@ -370,7 +437,8 @@ export default function MathQuest() {
     } else {
       const tile = tiles[position];
       if (tile && tile.difficulty && tile.points) {
-        showMathProblem(tile.difficulty, tile.points);
+        // Use the tile's stored question and answer
+        showMathProblem(tile.difficulty, tile.points, tile.question, tile.answer);
       }
     }
   }, [tiles]);
@@ -436,6 +504,14 @@ export default function MathQuest() {
     setIsRolling(true);
     setDiceLabel('Rolling...');
 
+    // Play random preloaded dice roll sound
+    if (diceAudioRef.current.length > 0) {
+      const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
+      const audio = diceAudioRef.current[randomIndex];
+      audio.currentTime = 0; // Reset to start in case it's still playing
+      audio.play().catch(e => console.log('Audio play failed:', e));
+    }
+
     const value = Math.floor(Math.random() * 6) + 1;
 
     setTimeout(() => {
@@ -443,10 +519,10 @@ export default function MathQuest() {
       setIsRolling(false);
       setDiceLabel(`${players[currentPlayer].name} rolled ${value}!`);
 
-      // Wait 1 second before starting movement so player can see the result
+      // Wait 0.5 seconds before starting movement so player can see the result
       setTimeout(() => {
         movePlayer(value);
-      }, 1000);
+      }, 500);
     }, 500);
   };
 
@@ -481,7 +557,6 @@ export default function MathQuest() {
     timerValue?: number
   ) => {
     initializePlayers(playerCount);
-    createBoard();
 
     // Set up imported problems if provided
     if (problems) {
@@ -489,11 +564,15 @@ export default function MathQuest() {
       setImportedProblems(problems);
       setProblemPool([...problems.problems]);
       setUsedProblemIds(new Set());
+      // Create board with imported problems
+      createBoard(problems);
     } else {
       console.log('Starting game with generated problems');
       setImportedProblems(null);
       setProblemPool([]);
       setUsedProblemIds(new Set());
+      // Create board with generated problems
+      createBoard();
     }
 
     // Set negative points setting (default to true if not specified)
@@ -533,6 +612,39 @@ export default function MathQuest() {
       return () => clearTimeout(timer);
     }
   }, [screen, tiles, updatePlayerPositions, players.length]);
+
+  // Helper to get correct audio path with basePath (runtime detection)
+  const getAudioPath = (filename: string) => {
+    // Detect if we're running under a basePath by checking the pathname
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/Math-quest')) {
+      return `/Math-quest/${filename}`;
+    }
+    return `/${filename}`;
+  };
+
+  // Preload sound effects in parallel
+  useEffect(() => {
+    const diceSounds = ['dr2.mp3', 'dr3.mp3', 'dr4.mp3', 'dr5.mp3'];
+    diceAudioRef.current = diceSounds.map(sound => {
+      const audio = new Audio(getAudioPath(sound));
+      audio.preload = 'auto';
+      audio.load();
+      return audio;
+    });
+
+    const yaySounds = ['yay1.mp3', 'yay2.mp3', 'yay3.mp3', 'yay4.mp3', 'yay5.mp3'];
+    yayAudioRef.current = yaySounds.map(sound => {
+      const audio = new Audio(getAudioPath(sound));
+      audio.preload = 'auto';
+      audio.load();
+      return audio;
+    });
+
+    const chimeAudio = new Audio(getAudioPath('chime.mp3'));
+    chimeAudio.preload = 'auto';
+    chimeAudio.load();
+    chimeAudioRef.current = chimeAudio;
+  }, []);
 
   // Cleanup timer when component unmounts
   useEffect(() => {
