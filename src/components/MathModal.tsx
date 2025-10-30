@@ -128,6 +128,19 @@ export default function MathModal({ isOpen, problem, timeLeft, onSubmit, timerEn
             }
           }}
           onKeyPress={handleKeyPress}
+          onFocus={(e) => {
+            // Prevent native keyboard on mobile when custom keyboard is active
+            if (useCustomKeyboard) {
+              e.target.blur();
+              e.preventDefault();
+            }
+          }}
+          onClick={(e) => {
+            // Prevent native keyboard on mobile when custom keyboard is active
+            if (useCustomKeyboard) {
+              e.preventDefault();
+            }
+          }}
           placeholder="Your answer"
           autoFocus={!useCustomKeyboard}
           readOnly={useCustomKeyboard}

@@ -1,0 +1,17 @@
+{
+  "name": "Math Quest",
+  "short_name": "Math Quest",
+  "description": "An educational board game combining quest-style gameplay with math challenges",
+  "start_url": "/Math-quest/",
+  "display": "standalone",
+  "background_color": "#8b5cf6",
+  "theme_color": "#8b5cf6",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/Math-quest/favicon.ico",
+      "sizes": "16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
