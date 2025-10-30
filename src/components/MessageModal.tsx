@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 
 interface MessageModalProps {
   isOpen: boolean;
   message: string;
   type: 'success' | 'error';
   onClose: () => void;
+  streak?: number;
 }
 
 const wrongAnswerEmojis = [
@@ -50,21 +51,46 @@ const correctAnswerEmojis = [
   '✨', // Sparkles
 ];
 
-export default function MessageModal({ isOpen, message, type, onClose }: MessageModalProps) {
+export default function MessageModal({ isOpen, message, type, onClose, streak = 0 }: MessageModalProps) {
   // Pick a random emoji when modal opens
   const randomEmoji = useMemo(() => {
     const emojiList = type === 'success' ? correctAnswerEmojis : wrongAnswerEmojis;
     return emojiList[Math.floor(Math.random() * emojiList.length)];
   }, [isOpen, type]);
 
-  console.log('MessageModal render:', { isOpen, message, type });
+  // Determine animation based on type and streak (with 50% chance except for streaks)
+  const emojiAnimation = useMemo(() => {
+    if (type === 'success' && streak >= 3) {
+      // Always animate on 3+ streak
+      return 'animate-spin-grow';
+    } else if (type === 'success') {
+      // 50% chance of animation on normal success
+      return Math.random() < 0.5 ? 'animate-wiggle' : '';
+    } else {
+      // 50% chance of animation on failure
+      return Math.random() < 0.5 ? 'animate-shake' : '';
+    }
+  }, [isOpen, type, streak]);
+
+  // Auto-close after 2.5 seconds
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 2500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, onClose]);
+
+  console.log('MessageModal render:', { isOpen, message, type, streak });
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="w-[90%] max-w-[500px] animate-slide-in rounded-2xl bg-white p-10 text-center">
-        <div className="mb-5 text-6xl">
+        <div className={`mb-5 text-6xl ${emojiAnimation}`}>
           {randomEmoji}
         </div>
         <div className={`text-2xl font-bold ${

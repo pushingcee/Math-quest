@@ -24,7 +24,7 @@ export default function MathQuest() {
   const [tiles, setTiles] = useState<TileData[]>([]);
   const [mathProblem, setMathProblem] = useState<MathProblem | null>(null);
   const [timeLeft, setTimeLeft] = useState(10);
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error'; streak?: number } | null>(null);
   const [bannerMessage, setBannerMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [movesInRound, setMovesInRound] = useState(0);
   const [playerPositions, setPlayerPositions] = useState<Map<number, { left: number; top: number }>>(new Map());
@@ -303,7 +303,8 @@ export default function MathQuest() {
       text: negativePointsEnabled
         ? `⏰ You ran out of time! The correct answer was ${correctAnswer}. -${points} points!`
         : `⏰ You ran out of time! The correct answer was ${correctAnswer}.`,
-      type: 'error'
+      type: 'error',
+      streak: 0
     });
     console.log('Timeout message set');
   };
@@ -338,9 +339,12 @@ export default function MathQuest() {
         chime.play().catch(e => console.log('Audio play failed:', e));
       }
 
+      // Calculate new streak before updating state
+      const currentStreak = players[currentPlayer].streak || 0;
+      const newStreak = currentStreak + 1;
+
       setPlayers((prevPlayers) => {
         const newPlayers = [...prevPlayers];
-        const newStreak = (newPlayers[currentPlayer].streak || 0) + 1;
 
         newPlayers[currentPlayer] = {
           ...newPlayers[currentPlayer],
@@ -360,7 +364,8 @@ export default function MathQuest() {
       });
       setMessage({
         text: `+${points} points!`,
-        type: 'success'
+        type: 'success',
+        streak: newStreak
       });
     } else {
       // Reset streak and deduct points if enabled
@@ -379,7 +384,8 @@ export default function MathQuest() {
         text: negativePointsEnabled
           ? `The answer was ${answer}. -${points} points!`
           : `The answer was ${answer}.`,
-        type: 'error'
+        type: 'error',
+        streak: 0
       });
     }
   };
@@ -738,6 +744,7 @@ export default function MathQuest() {
           isOpen={message !== null && mathProblem === null}
           message={message?.text || ''}
           type={message?.type || 'success'}
+          streak={message?.streak}
           onClose={closeMessageModal}
         />
       </div>
