@@ -8,6 +8,7 @@ interface MessageModalProps {
   type: 'success' | 'error';
   onClose: () => void;
   streak?: number;
+  autoClose?: boolean;
 }
 
 const wrongAnswerEmojis = [
@@ -51,7 +52,7 @@ const correctAnswerEmojis = [
   '✨', // Sparkles
 ];
 
-export default function MessageModal({ isOpen, message, type, onClose, streak = 0 }: MessageModalProps) {
+export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true }: MessageModalProps) {
   // Pick a random emoji when modal opens
   const randomEmoji = useMemo(() => {
     const emojiList = type === 'success' ? correctAnswerEmojis : wrongAnswerEmojis;
@@ -72,16 +73,16 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
     }
   }, [isOpen, type, streak]);
 
-  // Auto-close after 2.5 seconds
+  // Auto-close after 2.5 seconds (if enabled)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && autoClose) {
       const timer = setTimeout(() => {
         onClose();
       }, 2500);
 
       return () => clearTimeout(timer);
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, autoClose]);
 
   console.log('MessageModal render:', { isOpen, message, type, streak });
 

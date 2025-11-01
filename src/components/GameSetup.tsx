@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
 
 interface GameSetupProps {
-  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number) => void;
+  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number, autoCloseModal?: boolean) => void;
 }
 
 export default function GameSetup({ onStart }: GameSetupProps) {
@@ -14,7 +14,8 @@ export default function GameSetup({ onStart }: GameSetupProps) {
   const [error, setError] = useState<string>('');
   const [negativePoints, setNegativePoints] = useState(true);
   const [timerEnabled, setTimerEnabled] = useState(false);
-  const [timerValue, setTimerValue] = useState(30);
+  const [timerValue, setTimerValue] = useState<number | string>(30);
+  const [autoCloseModal, setAutoCloseModal] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -54,7 +55,9 @@ export default function GameSetup({ onStart }: GameSetupProps) {
   };
 
   const handleStart = () => {
-    onStart(playerCount, importedProblems || undefined, negativePoints, timerEnabled, timerValue);
+    // Ensure timerValue is a valid number
+    const validTimerValue = typeof timerValue === 'string' ? parseInt(timerValue) || 30 : timerValue;
+    onStart(playerCount, importedProblems || undefined, negativePoints, timerEnabled, validTimerValue, autoCloseModal);
   };
 
   return (
@@ -67,7 +70,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
           onChange={(e) => setPlayerCount(parseInt(e.target.value))}
           className="ml-2.5 rounded-lg border-2 border-purple-500 bg-white px-3 py-1.5 text-lg text-black transition-all hover:border-purple-600 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
         >
-          <option value={1}>1 Player (Solo)</option>
+          <option value={1}>1 Player</option>
           <option value={2}>2 Players</option>
           <option value={3}>3 Players</option>
           <option value={4}>4 Players</option>
@@ -97,12 +100,28 @@ export default function GameSetup({ onStart }: GameSetupProps) {
           <span className="font-medium">Enable Timer</span>
         </label>
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           value={timerValue}
-          onChange={(e) => setTimerValue(parseInt(e.target.value) || 30)}
+          onChange={(e) => {
+            const val = e.target.value;
+            // Allow empty or valid numbers only
+            if (val === '' || /^\d+$/.test(val)) {
+              setTimerValue(val === '' ? '' : parseInt(val));
+            }
+          }}
+          onBlur={() => {
+            // Validate on blur: ensure it's a valid number between 5-300
+            const num = typeof timerValue === 'string' ? parseInt(timerValue) : timerValue;
+            if (isNaN(num) || timerValue === '') {
+              setTimerValue(30);
+            } else if (num < 5) {
+              setTimerValue(5);
+            } else if (num > 300) {
+              setTimerValue(300);
+            }
+          }}
           disabled={!timerEnabled}
-          min={5}
-          max={300}
           className={`w-20 rounded-lg border-2 px-3 py-1.5 text-center text-lg transition-all focus:outline-none focus:ring-2 ${
             timerEnabled
               ? 'border-purple-500 text-black focus:border-purple-600 focus:ring-purple-500/20'
@@ -110,6 +129,18 @@ export default function GameSetup({ onStart }: GameSetupProps) {
           }`}
         />
         <span className="text-lg text-black">seconds</span>
+      </div>
+
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <label className="flex cursor-pointer items-center gap-2 text-lg text-black">
+          <input
+            type="checkbox"
+            checked={autoCloseModal}
+            onChange={(e) => setAutoCloseModal(e.target.checked)}
+            className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
+          />
+          <span className="font-medium">Enable Modal Auto-Close</span>
+        </label>
       </div>
 
       <div className="mt-6 rounded-lg border-2 border-dashed border-purple-300 bg-purple-50 p-4">

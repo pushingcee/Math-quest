@@ -35,6 +35,8 @@ export default function MathQuest() {
   const [negativePointsEnabled, setNegativePointsEnabled] = useState(true);
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timerDuration, setTimerDuration] = useState(30);
+  const [isPaused, setIsPaused] = useState(false);
+  const [autoCloseModal, setAutoCloseModal] = useState(true);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -232,6 +234,11 @@ export default function MathQuest() {
     return generateMathProblem(difficulty);
   };
 
+  // Toggle pause
+  const togglePause = () => {
+    setIsPaused(prev => !prev);
+  };
+
   // Show math problem
   const showMathProblem = (difficulty: number, points: number, question?: string, answer?: number) => {
     console.log('showMathProblem called', { difficulty, points, question, answer, hasImported: !!importedProblems });
@@ -247,6 +254,7 @@ export default function MathQuest() {
     const problemWithPoints = { ...problem, points };
     setMathProblem(problemWithPoints);
     setTimeLeft(timerEnabled ? timerDuration : 0);
+    setIsPaused(false); // Reset pause state for new problem
 
     // Clear any existing timer first
     if (timerIntervalRef.current) {
@@ -262,18 +270,24 @@ export default function MathQuest() {
       // Start timer
       let time = timerDuration;
       timerIntervalRef.current = setInterval(() => {
-        time--;
-        setTimeLeft(time);
-        console.log('Timer tick:', time);
-        if (time <= 0) {
-          console.log('Timer expired, submitting answer as wrong');
-          if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-            timerIntervalRef.current = null;
+        // Only decrement if not paused
+        setIsPaused(currentPaused => {
+          if (!currentPaused) {
+            time--;
+            setTimeLeft(time);
+            console.log('Timer tick:', time);
+            if (time <= 0) {
+              console.log('Timer expired, submitting answer as wrong');
+              if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+              }
+              // Call submitAnswerTimeout with captured values
+              submitAnswerTimeout(capturedAnswer, capturedPoints);
+            }
           }
-          // Call submitAnswerTimeout with captured values
-          submitAnswerTimeout(capturedAnswer, capturedPoints);
-        }
+          return currentPaused;
+        });
       }, 1000);
     }
   };
@@ -455,6 +469,7 @@ export default function MathQuest() {
     const oldPosition = players[playerId].position;
 
     setMovingPlayer(playerId);
+    setIsRolling(false);
 
     for (let step = 1; step <= steps; step++) {
       await new Promise((resolve) => setTimeout(resolve, 400));
@@ -505,7 +520,7 @@ export default function MathQuest() {
 
   // Roll dice
   const rollDice = () => {
-    if (isRolling) return;
+    if (isRolling || movingPlayer !== null || mathProblem !== null || diceValue !== 0) return;
 
     setIsRolling(true);
     setDiceLabel('Rolling...');
@@ -522,7 +537,6 @@ export default function MathQuest() {
 
     setTimeout(() => {
       setDiceValue(value);
-      setIsRolling(false);
       setDiceLabel(`${players[currentPlayer].name} rolled ${value}!`);
 
       // Wait 0.5 seconds before starting movement so player can see the result
@@ -560,7 +574,8 @@ export default function MathQuest() {
     problems?: ImportedProblemsData,
     negativePoints?: boolean,
     enableTimer?: boolean,
-    timerValue?: number
+    timerValue?: number,
+    autoClose?: boolean
   ) => {
     initializePlayers(playerCount);
 
@@ -587,6 +602,9 @@ export default function MathQuest() {
     // Set timer settings
     setTimerEnabled(enableTimer !== undefined ? enableTimer : false);
     setTimerDuration(timerValue !== undefined ? timerValue : 30);
+
+    // Set auto-close modal setting (default to true if not specified)
+    setAutoCloseModal(autoClose !== undefined ? autoClose : true);
 
     setScreen('playing');
     setCurrentPlayer(0);
@@ -701,6 +719,7 @@ export default function MathQuest() {
                       left={pos.left}
                       top={pos.top}
                       isMoving={movingPlayer === player.id}
+                      isActive={player.id === currentPlayer && mathProblem === null}
                     />
                   );
                 })}
@@ -738,6 +757,8 @@ export default function MathQuest() {
           timeLeft={timeLeft}
           onSubmit={submitAnswer}
           timerEnabled={timerEnabled}
+          isPaused={isPaused}
+          onTogglePause={togglePause}
         />
 
         <MessageModal
@@ -746,6 +767,7 @@ export default function MathQuest() {
           type={message?.type || 'success'}
           streak={message?.streak}
           onClose={closeMessageModal}
+          autoClose={autoCloseModal}
         />
       </div>
     </div>

@@ -11,9 +11,11 @@ interface MathModalProps {
   timeLeft: number;
   onSubmit: (answer: number) => void;
   timerEnabled?: boolean;
+  isPaused?: boolean;
+  onTogglePause?: () => void;
 }
 
-export default function MathModal({ isOpen, problem, timeLeft, onSubmit, timerEnabled = true }: MathModalProps) {
+export default function MathModal({ isOpen, problem, timeLeft, onSubmit, timerEnabled = true, isPaused = false, onTogglePause }: MathModalProps) {
   const [answer, setAnswer] = useState('');
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false);
   const mathRef = useRef<HTMLDivElement>(null);
@@ -110,8 +112,18 @@ export default function MathModal({ isOpen, problem, timeLeft, onSubmit, timerEn
           <span>= ?</span>
         </div>
         {timerEnabled && (
-          <div className="my-2 text-xl text-red-500">
-            Time: <span id="timer">{timeLeft}</span>s
+          <div className="my-2 flex items-center justify-center gap-3">
+            <div className="text-xl text-red-500">
+              Time: <span id="timer">{timeLeft}</span>s
+            </div>
+            {onTogglePause && (
+              <button
+                onClick={onTogglePause}
+                className="rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 px-4 py-1.5 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
+              >
+                {isPaused ? '▶ Resume' : '⏸ Pause'}
+              </button>
+            )}
           </div>
         )}
         <input
