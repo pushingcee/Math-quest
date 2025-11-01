@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Player, MathProblem, TileData, GameScreen } from '@/types/game';
-import { ImportedProblemsData, ImportedProblem } from '@/types/imported-problems';
-import { playerColors } from './PlayerSprites';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Player, GameScreen } from '@/types/game';
+import { ImportedProblemsData } from '@/types/imported-problems';
+import { TileLandingResult } from '@/game/constants/enums';
+import { GameEngine } from '@/game/engine/GameEngine';
+import { GameState } from '@/game/engine/GameState';
 import GameSetup from './GameSetup';
 import Board from './Board';
 import PlayerCard from './PlayerCard';
@@ -14,115 +16,85 @@ import MessageModal from './MessageModal';
 import GameOver from './GameOver';
 
 export default function MathQuest() {
-  const [screen, setScreen] = useState<GameScreen>('setup');
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState(0);
-  const [round, setRound] = useState(1);
-  const [diceValue, setDiceValue] = useState(0);
-  const [isRolling, setIsRolling] = useState(false);
-  const [diceLabel, setDiceLabel] = useState('Click to Roll!');
-  const [tiles, setTiles] = useState<TileData[]>([]);
-  const [mathProblem, setMathProblem] = useState<MathProblem | null>(null);
-  const [timeLeft, setTimeLeft] = useState(10);
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error'; streak?: number } | null>(null);
-  const [bannerMessage, setBannerMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const [movesInRound, setMovesInRound] = useState(0);
-  const [playerPositions, setPlayerPositions] = useState<Map<number, { left: number; top: number }>>(new Map());
-  const [movingPlayer, setMovingPlayer] = useState<number | null>(null);
-  const [importedProblems, setImportedProblems] = useState<ImportedProblemsData | null>(null);
-  const [problemPool, setProblemPool] = useState<ImportedProblem[]>([]);
-  const [usedProblemIds, setUsedProblemIds] = useState<Set<number>>(new Set());
-  const [negativePointsEnabled, setNegativePointsEnabled] = useState(true);
-  const [timerEnabled, setTimerEnabled] = useState(false);
-  const [timerDuration, setTimerDuration] = useState(30);
-  const [isPaused, setIsPaused] = useState(false);
-  const [autoCloseModal, setAutoCloseModal] = useState(true);
+  // Create game engine instance (persists across renders)
+  const engine = useMemo(() => new GameEngine(), []);
 
-  const boardRef = useRef<HTMLDivElement>(null);
+  // Subscribe to engine state
+  const [gameState, setGameState] = useState<GameState>(engine.getState());
+
+  // UI-specific state (not part of game logic)
+  const [playerPositions, setPlayerPositions] = useState<Map<number, { left: number; top: number }>>(new Map());
+  const [diceLabel, setDiceLabel] = useState('Click to Roll!');
+
+  // Refs for audio and DOM
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const diceAudioRef = useRef<HTMLAudioElement[]>([]);
   const yayAudioRef = useRef<HTMLAudioElement[]>([]);
   const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
-  const maxRounds = 10;
-  const boardSize = 40;
 
-  // Create board tiles
-  const createBoard = useCallback((problems?: ImportedProblemsData) => {
-    const newTiles: TileData[] = [];
+  // Subscribe to engine state changes
+  useEffect(() => {
+    const unsubscribe = engine.subscribe((newState) => {
+      setGameState(newState);
+    });
+    return unsubscribe;
+  }, [engine]);
 
-    // Create a pool of imported problems if available
-    let problemsPool = problems ? [...problems.problems] : [];
-
-    for (let i = 0; i < 40; i++) {
-      if (i === 0) {
-        newTiles.push({ index: i, type: 'corner', label: 'START<br>+50pts' });
-      } else if (i === 10) {
-        newTiles.push({ index: i, type: 'corner', label: 'BONUS<br>×2pts' });
-      } else if (i === 20) {
-        newTiles.push({ index: i, type: 'corner', label: 'CHALLENGE<br>±100pts' });
-      } else if (i === 30) {
-        newTiles.push({ index: i, type: 'corner', label: 'PENALTY<br>-30pts' });
-      } else {
-        const difficulty = Math.floor(Math.random() * 3) + 1;
-        const points = difficulty * 10 + Math.floor(Math.random() * 20);
-
-        let problem;
-        // Use imported problem if available, otherwise generate random one
-        if (problemsPool.length > 0) {
-          const randomIndex = Math.floor(Math.random() * problemsPool.length);
-          const importedProblem = problemsPool[randomIndex];
-          problemsPool.splice(randomIndex, 1);
-
-          // If pool is empty, refill it
-          if (problemsPool.length === 0 && problems) {
-            problemsPool = [...problems.problems];
-          }
-
-          problem = {
-            question: importedProblem.question.trim(),
-            answer: parseFloat(importedProblem.answer.trim())
-          };
+  // Update dice label when current player changes
+  useEffect(() => {
+    if (gameState.screen === GameScreen.Playing && gameState.players.length > 0) {
+      const player = gameState.players[gameState.currentPlayer];
+      if (player) {
+        if (gameState.diceValue === 0) {
+          setDiceLabel(`${player.name}'s turn - Click to Roll!`);
         } else {
-          problem = generateMathProblem(difficulty);
+          setDiceLabel(`${player.name} rolled ${gameState.diceValue}!`);
         }
-
-        newTiles.push({
-          index: i,
-          type: 'regular',
-          difficulty,
-          points,
-          question: problem.question,
-          answer: problem.answer
-        });
       }
     }
-    console.log('Created tiles:', newTiles.slice(0, 5)); // Log first 5 tiles
-    setTiles(newTiles);
-  }, []);
+  }, [gameState.currentPlayer, gameState.diceValue, gameState.players, gameState.screen]);
 
-  // Initialize players
-  const initializePlayers = (count: number) => {
-    const newPlayers: Player[] = [];
-    for (let i = 0; i < count; i++) {
-      newPlayers.push({
-        id: i,
-        name: `Player ${i + 1}`,
-        position: 0,
-        score: 0,
-        color: playerColors[i],
-        streak: 0,
-      });
+  // Timer management
+  useEffect(() => {
+    if (gameState.mathProblem && gameState.config.timerEnabled) {
+      // Clear any existing timer
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+
+      let time = gameState.config.timerDuration;
+      engine.setTimeLeft(time);
+
+      timerIntervalRef.current = setInterval(() => {
+        const state = engine.getState();
+        if (!state.isPaused) {
+          time--;
+          engine.setTimeLeft(time);
+          if (time <= 0) {
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
+              timerIntervalRef.current = null;
+            }
+            engine.submitAnswerTimeout();
+          }
+        }
+      }, 1000);
+
+      return () => {
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+      };
     }
-    setPlayers(newPlayers);
-  };
+  }, [gameState.mathProblem, gameState.config.timerEnabled, engine]);
 
-  // Calculate token positions
-  const calculateTokenPosition = (position: number, playerId: number, allPlayers: Player[]) => {
+  // Calculate token position (DOM-specific logic)
+  const calculateTokenPosition = useCallback((position: number, playerId: number, allPlayers: Player[]) => {
     const tile = document.querySelector(`[data-index="${position}"]`);
     const board = document.getElementById('board');
 
     if (!tile || !board) {
-      console.log('Tile or board not found', { position, tile: !!tile, board: !!board });
       return { left: 0, top: 0 };
     }
 
@@ -140,513 +112,45 @@ export default function MathQuest() {
     const relativeTop = tileRect.top - boardRect.top + tileRect.height / 2 - 32 + offsetY;
 
     return { left: relativeLeft, top: relativeTop };
-  };
+  }, []);
 
-  // Update all player positions
+  // Update player positions when players change
   const updatePlayerPositions = useCallback(() => {
     const newPositions = new Map();
-    players.forEach((player) => {
-      const pos = calculateTokenPosition(player.position, player.id, players);
+    gameState.players.forEach((player) => {
+      const pos = calculateTokenPosition(player.position, player.id, gameState.players);
       newPositions.set(player.id, pos);
     });
     setPlayerPositions(newPositions);
-  }, [players]);
+  }, [gameState.players, calculateTokenPosition]);
 
-  // Generate math problem (returns plain text, will be converted to LaTeX by MathModal)
-  const generateMathProblem = (difficulty: number): { question: string; answer: number } => {
-    let a: number, b: number, operation: string, answer: number;
-
-    switch (difficulty) {
-      case 1: // Easy
-        a = Math.floor(Math.random() * 20) + 1;
-        b = Math.floor(Math.random() * 20) + 1;
-        operation = Math.random() < 0.5 ? '+' : '-';
-        answer = operation === '+' ? a + b : a - b;
-        break;
-      case 2: // Medium
-        a = Math.floor(Math.random() * 50) + 10;
-        b = Math.floor(Math.random() * 30) + 5;
-        const ops = ['+', '-', '*'];
-        operation = ops[Math.floor(Math.random() * ops.length)];
-        if (operation === '+') answer = a + b;
-        else if (operation === '-') answer = a - b;
-        else answer = a * b;
-        break;
-      case 3: // Hard
-        const hardOps = ['*', '/'];
-        operation = hardOps[Math.floor(Math.random() * hardOps.length)];
-        if (operation === '*') {
-          a = Math.floor(Math.random() * 20) + 5;
-          b = Math.floor(Math.random() * 20) + 5;
-          answer = a * b;
-        } else {
-          b = Math.floor(Math.random() * 10) + 2;
-          answer = Math.floor(Math.random() * 20) + 5;
-          a = b * answer;
-        }
-        break;
-      default:
-        a = 0;
-        b = 0;
-        operation = '+';
-        answer = 0;
-    }
-
-    return { question: `${a} ${operation} ${b}`, answer };
-  };
-
-  // Get next imported problem or generate random one
-  const getNextProblem = (difficulty: number): { question: string; answer: number } => {
-    // Use imported problems if available
-    if (importedProblems && problemPool.length > 0) {
-      // Get a random problem from the pool
-      const randomIndex = Math.floor(Math.random() * problemPool.length);
-      const importedProblem = problemPool[randomIndex];
-
-      // Remove from pool
-      const newPool = [...problemPool];
-      newPool.splice(randomIndex, 1);
-      setProblemPool(newPool);
-
-      // Add to used set
-      setUsedProblemIds(prev => new Set(prev).add(importedProblem.id));
-
-      // If pool is empty, refill it (excluding just-used problems for variety)
-      if (newPool.length === 0 && importedProblems.problems.length > 1) {
-        const availableProblems = importedProblems.problems.filter(
-          p => p.id !== importedProblem.id
-        );
-        setProblemPool([...availableProblems]);
-        console.log('Problem pool refilled');
-      }
-
-      // Parse answer as number
-      const answer = parseFloat(importedProblem.answer.trim());
-
-      console.log('Using imported problem:', importedProblem);
-      return {
-        question: importedProblem.question.trim(),
-        answer: isNaN(answer) ? 0 : answer
-      };
-    }
-
-    // Fall back to generated problems
-    return generateMathProblem(difficulty);
-  };
-
-  // Toggle pause
-  const togglePause = () => {
-    setIsPaused(prev => !prev);
-  };
-
-  // Show math problem
-  const showMathProblem = (difficulty: number, points: number, question?: string, answer?: number) => {
-    console.log('showMathProblem called', { difficulty, points, question, answer, hasImported: !!importedProblems });
-
-    // Use provided question/answer if available, otherwise generate new one
-    let problem;
-    if (question !== undefined && answer !== undefined) {
-      problem = { question, answer };
-    } else {
-      problem = getNextProblem(difficulty);
-    }
-
-    const problemWithPoints = { ...problem, points };
-    setMathProblem(problemWithPoints);
-    setTimeLeft(timerEnabled ? timerDuration : 0);
-    setIsPaused(false); // Reset pause state for new problem
-
-    // Clear any existing timer first
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-    }
-
-    // Only start timer if enabled
-    if (timerEnabled) {
-      // Capture the problem answer and points for the timer closure
-      const capturedAnswer = problemWithPoints.answer;
-      const capturedPoints = problemWithPoints.points;
-
-      // Start timer
-      let time = timerDuration;
-      timerIntervalRef.current = setInterval(() => {
-        // Only decrement if not paused
-        setIsPaused(currentPaused => {
-          if (!currentPaused) {
-            time--;
-            setTimeLeft(time);
-            console.log('Timer tick:', time);
-            if (time <= 0) {
-              console.log('Timer expired, submitting answer as wrong');
-              if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-              }
-              // Call submitAnswerTimeout with captured values
-              submitAnswerTimeout(capturedAnswer, capturedPoints);
-            }
-          }
-          return currentPaused;
-        });
-      }, 1000);
-    }
-  };
-
-  // Handle timeout separately to avoid closure issues
-  const submitAnswerTimeout = (correctAnswer: number, points: number) => {
-    console.log('submitAnswerTimeout called', { correctAnswer, points, currentPlayer });
-
-    // Close math modal
-    setMathProblem(null);
-
-    // Reset streak and update score (only deduct if negative points enabled)
-    setPlayers((prevPlayers) => {
-      const newPlayers = [...prevPlayers];
-      newPlayers[currentPlayer] = {
-        ...newPlayers[currentPlayer],
-        score: negativePointsEnabled
-          ? newPlayers[currentPlayer].score - points
-          : newPlayers[currentPlayer].score,
-        streak: 0,
-      };
-      return newPlayers;
-    });
-
-    // Show timeout message
-    setMessage({
-      text: negativePointsEnabled
-        ? `⏰ You ran out of time! The correct answer was ${correctAnswer}. -${points} points!`
-        : `⏰ You ran out of time! The correct answer was ${correctAnswer}.`,
-      type: 'error',
-      streak: 0
-    });
-    console.log('Timeout message set');
-  };
-
-  // Submit answer (called when user manually submits)
-  const submitAnswer = (userAnswer: number) => {
-    console.log('submitAnswer called', { userAnswer, mathProblem });
-
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-
-    if (!mathProblem) {
-      console.log('No math problem, returning');
-      return;
-    }
-
-    const correct = userAnswer === mathProblem.answer;
-    const points = mathProblem.points;
-    const answer = mathProblem.answer;
-
-    // Close math modal first
-    setMathProblem(null);
-
-    // Update score and show result modal
-    if (correct) {
-      // Play chime sound with random pitch shift on every correct answer
-      if (chimeAudioRef.current) {
-        const chime = chimeAudioRef.current.cloneNode() as HTMLAudioElement;
-        chime.playbackRate = 0.95 + Math.random() * 0.1; // Random rate between 0.95 and 1.05
-        chime.play().catch(e => console.log('Audio play failed:', e));
-      }
-
-      // Calculate new streak before updating state
-      const currentStreak = players[currentPlayer].streak || 0;
-      const newStreak = currentStreak + 1;
-
-      setPlayers((prevPlayers) => {
-        const newPlayers = [...prevPlayers];
-
-        newPlayers[currentPlayer] = {
-          ...newPlayers[currentPlayer],
-          score: newPlayers[currentPlayer].score + points,
-          streak: newStreak,
-        };
-
-        // Play random yay sound only if streak >= 3
-        if (newStreak >= 3 && yayAudioRef.current.length > 0) {
-          const randomIndex = Math.floor(Math.random() * yayAudioRef.current.length);
-          const audio = yayAudioRef.current[randomIndex];
-          audio.currentTime = 0;
-          audio.play().catch(e => console.log('Audio play failed:', e));
-        }
-
-        return newPlayers;
-      });
-      setMessage({
-        text: `+${points} points!`,
-        type: 'success',
-        streak: newStreak
-      });
-    } else {
-      // Reset streak and deduct points if enabled
-      setPlayers((prevPlayers) => {
-        const newPlayers = [...prevPlayers];
-        newPlayers[currentPlayer] = {
-          ...newPlayers[currentPlayer],
-          score: negativePointsEnabled
-            ? newPlayers[currentPlayer].score - points
-            : newPlayers[currentPlayer].score,
-          streak: 0,
-        };
-        return newPlayers;
-      });
-      setMessage({
-        text: negativePointsEnabled
-          ? `The answer was ${answer}. -${points} points!`
-          : `The answer was ${answer}.`,
-        type: 'error',
-        streak: 0
-      });
-    }
-  };
-
-  // Close message modal and continue to next turn
-  const closeMessageModal = () => {
-    setMessage(null);
-    nextTurn();
-  };
-
-  // Show banner message (auto-dismiss)
-  const showMessage = (text: string, type: 'success' | 'error') => {
-    setBannerMessage({ text, type });
-    setTimeout(() => setBannerMessage(null), 3000);
-  };
-
-  // Handle tile landing
-  const handleTileLanding = useCallback((position: number, playerId: number) => {
-    console.log('handleTileLanding', { position, playerId, tile: tiles[position] });
-
-    if (position === 0) {
-      showMessage('Landed on START! +50 points!', 'success');
-      setPlayers((prevPlayers) => {
-        const newPlayers = [...prevPlayers];
-        newPlayers[playerId] = {
-          ...newPlayers[playerId],
-          score: newPlayers[playerId].score + 50,
-        };
-        return newPlayers;
-      });
-      nextTurn();
-    } else if (position === 10) {
-      showMessage('BONUS! Your next correct answer worth double!', 'success');
-      // Corner tiles generate new problems each time
-      showMathProblem(2, 2);
-    } else if (position === 20) {
-      showMessage('CHALLENGE! High risk, high reward!', 'success');
-      // Corner tiles generate new problems each time
-      showMathProblem(3, 100);
-    } else if (position === 30) {
-      if (negativePointsEnabled) {
-        showMessage('PENALTY! -30 points!', 'error');
-        setPlayers((prevPlayers) => {
-          const newPlayers = [...prevPlayers];
-          newPlayers[playerId] = {
-            ...newPlayers[playerId],
-            score: newPlayers[playerId].score - 30,
-          };
-          return newPlayers;
-        });
-      } else {
-        showMessage('PENALTY! (No points deducted)', 'error');
-      }
-      nextTurn();
-    } else {
-      const tile = tiles[position];
-      if (tile && tile.difficulty && tile.points) {
-        // Use the tile's stored question and answer
-        showMathProblem(tile.difficulty, tile.points, tile.question, tile.answer);
-      }
-    }
-  }, [tiles]);
-
-  // Move player
-  const movePlayer = async (steps: number) => {
-    const playerId = currentPlayer;
-    const oldPosition = players[playerId].position;
-
-    setMovingPlayer(playerId);
-    setIsRolling(false);
-
-    for (let step = 1; step <= steps; step++) {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-
-      const newPosition = (oldPosition + step) % boardSize;
-
-      // Update player position immutably
-      setPlayers((prevPlayers) => {
-        const newPlayers = [...prevPlayers];
-        newPlayers[playerId] = {
-          ...newPlayers[playerId],
-          position: newPosition,
-        };
-
-        // Calculate position with updated players array
-        const pos = calculateTokenPosition(newPosition, playerId, newPlayers);
-        setPlayerPositions((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(playerId, pos);
-          return newMap;
-        });
-
-        return newPlayers;
-      });
-    }
-
-    setMovingPlayer(null);
-
-    const finalPosition = (oldPosition + steps) % boardSize;
-
-    // Check if passed START
-    if (finalPosition < oldPosition) {
-      setPlayers((prevPlayers) => {
-        const newPlayers = [...prevPlayers];
-        newPlayers[playerId] = {
-          ...newPlayers[playerId],
-          score: newPlayers[playerId].score + 50,
-        };
-        return newPlayers;
-      });
-      showMessage('Passed START! +50 points!', 'success');
-    }
-
-    setTimeout(() => {
-      handleTileLanding(finalPosition, playerId);
-    }, 500);
-  };
-
-  // Roll dice
-  const rollDice = () => {
-    if (isRolling || movingPlayer !== null || mathProblem !== null || diceValue !== 0) return;
-
-    setIsRolling(true);
-    setDiceLabel('Rolling...');
-
-    // Play random preloaded dice roll sound
-    if (diceAudioRef.current.length > 0) {
-      const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
-      const audio = diceAudioRef.current[randomIndex];
-      audio.currentTime = 0; // Reset to start in case it's still playing
-      audio.play().catch(e => console.log('Audio play failed:', e));
-    }
-
-    const value = Math.floor(Math.random() * 6) + 1;
-
-    setTimeout(() => {
-      setDiceValue(value);
-      setDiceLabel(`${players[currentPlayer].name} rolled ${value}!`);
-
-      // Wait 0.5 seconds before starting movement so player can see the result
-      setTimeout(() => {
-        movePlayer(value);
-      }, 500);
-    }, 500);
-  };
-
-  // Next turn
-  const nextTurn = () => {
-    const newMovesInRound = movesInRound + 1;
-    setMovesInRound(newMovesInRound);
-
-    if (newMovesInRound >= players.length) {
-      const newRound = round + 1;
-      setRound(newRound);
-      setMovesInRound(0);
-
-      if (newRound > maxRounds) {
-        setScreen('gameOver');
-        return;
-      }
-    }
-
-    const nextPlayer = (currentPlayer + 1) % players.length;
-    setCurrentPlayer(nextPlayer);
-    setDiceLabel(`${players[nextPlayer].name}'s turn - Click to Roll!`);
-    setDiceValue(0);
-  };
-
-  // Start game
-  const startGame = (
-    playerCount: number,
-    problems?: ImportedProblemsData,
-    negativePoints?: boolean,
-    enableTimer?: boolean,
-    timerValue?: number,
-    autoClose?: boolean
-  ) => {
-    initializePlayers(playerCount);
-
-    // Set up imported problems if provided
-    if (problems) {
-      console.log('Starting game with imported problems:', problems);
-      setImportedProblems(problems);
-      setProblemPool([...problems.problems]);
-      setUsedProblemIds(new Set());
-      // Create board with imported problems
-      createBoard(problems);
-    } else {
-      console.log('Starting game with generated problems');
-      setImportedProblems(null);
-      setProblemPool([]);
-      setUsedProblemIds(new Set());
-      // Create board with generated problems
-      createBoard();
-    }
-
-    // Set negative points setting (default to true if not specified)
-    setNegativePointsEnabled(negativePoints !== undefined ? negativePoints : true);
-
-    // Set timer settings
-    setTimerEnabled(enableTimer !== undefined ? enableTimer : false);
-    setTimerDuration(timerValue !== undefined ? timerValue : 30);
-
-    // Set auto-close modal setting (default to true if not specified)
-    setAutoCloseModal(autoClose !== undefined ? autoClose : true);
-
-    setScreen('playing');
-    setCurrentPlayer(0);
-    setRound(1);
-    setMovesInRound(0);
-    setDiceLabel(`Player 1's turn - Click to Roll!`);
-  };
-
-  // Reset game
-  const resetGame = () => {
-    setScreen('setup');
-    setPlayers([]);
-    setCurrentPlayer(0);
-    setRound(1);
-    setDiceValue(0);
-    setMovesInRound(0);
-    setMathProblem(null);
-    setMessage(null);
-    setBannerMessage(null);
-    setImportedProblems(null);
-    setProblemPool([]);
-    setUsedProblemIds(new Set());
-  };
-
-  // Update positions when screen or tiles change (not on every player update)
+  // Update positions when screen or tiles change
   useEffect(() => {
-    if (screen === 'playing' && tiles.length > 0 && players.length > 0) {
+    if (gameState.screen === GameScreen.Playing && gameState.tiles.length > 0 && gameState.players.length > 0) {
       const timer = setTimeout(updatePlayerPositions, 100);
       return () => clearTimeout(timer);
     }
-  }, [screen, tiles, updatePlayerPositions, players.length]);
+  }, [gameState.screen, gameState.tiles, updatePlayerPositions, gameState.players.length]);
 
-  // Helper to get correct audio path with basePath (runtime detection)
-  const getAudioPath = (filename: string) => {
-    // Detect if we're running under a basePath by checking the pathname
+  // Auto-dismiss banner message
+  useEffect(() => {
+    if (gameState.bannerMessage) {
+      const timer = setTimeout(() => {
+        engine.clearBannerMessage();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.bannerMessage, engine]);
+
+  // Helper to get audio path
+  const getAudioPath = useCallback((filename: string) => {
     if (typeof window !== 'undefined' && window.location.pathname.startsWith('/Math-quest')) {
       return `/Math-quest/${filename}`;
     }
     return `/${filename}`;
-  };
+  }, []);
 
-  // Preload sound effects in parallel
+  // Preload audio
   useEffect(() => {
     const diceSounds = ['dr2.mp3', 'dr3.mp3', 'dr4.mp3', 'dr5.mp3'];
     diceAudioRef.current = diceSounds.map(sound => {
@@ -668,17 +172,133 @@ export default function MathQuest() {
     chimeAudio.preload = 'auto';
     chimeAudio.load();
     chimeAudioRef.current = chimeAudio;
-  }, []);
+  }, [getAudioPath]);
 
-  // Cleanup timer when component unmounts
-  useEffect(() => {
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
+  // ===== EVENT HANDLERS =====
+
+  const handleStartGame = useCallback((
+    playerCount: number,
+    problems?: ImportedProblemsData,
+    negativePoints?: boolean,
+    enableTimer?: boolean,
+    timerValue?: number,
+    autoClose?: boolean
+  ) => {
+    engine.startGame(playerCount, problems, {
+      negativePointsEnabled: negativePoints !== undefined ? negativePoints : true,
+      timerEnabled: enableTimer !== undefined ? enableTimer : false,
+      timerDuration: timerValue !== undefined ? timerValue : 30,
+      autoCloseModal: autoClose !== undefined ? autoClose : true,
+    });
+  }, [engine]);
+
+  const handleRollDice = useCallback(() => {
+    const value = engine.rollDice();
+    if (value === 0) return; // Invalid roll
+
+    // Play dice sound
+    if (diceAudioRef.current.length > 0) {
+      const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
+      const audio = diceAudioRef.current[randomIndex];
+      audio.currentTime = 0;
+      audio.play().catch(e => console.log('Audio play failed:', e));
+    }
+
+    // Complete dice roll after animation
+    setTimeout(() => {
+      engine.completeDiceRoll(value);
+
+      // Wait to show result, then move player
+      setTimeout(() => {
+        handleMovePlayer(value);
+      }, 500);
+    }, 500);
+  }, [engine]);
+
+  const handleMovePlayer = useCallback(async (steps: number) => {
+    // Get fresh state from engine
+    const state = engine.getState();
+    const playerId = state.currentPlayer;
+    const player = state.players[playerId];
+
+    if (!player) {
+      console.error('Player not found:', playerId);
+      return;
+    }
+
+    const oldPosition = player.position;
+
+    engine.startMovingPlayer(playerId);
+    engine.setRolling(false);
+
+    // Animate movement step by step
+    for (let step = 1; step <= steps; step++) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      const currentState = engine.getState();
+      const newPosition = (oldPosition + step) % currentState.config.boardSize;
+      const passedStart = engine.movePlayerStep(playerId, newPosition);
+
+      // Update visual position
+      setTimeout(() => {
+        const freshState = engine.getState();
+        const pos = calculateTokenPosition(newPosition, playerId, freshState.players);
+        setPlayerPositions((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(playerId, pos);
+          return newMap;
+        });
+      }, 0);
+    }
+
+    engine.completePlayerMovement();
+
+    const finalState = engine.getState();
+    const finalPosition = (oldPosition + steps) % finalState.config.boardSize;
+
+    // Check if passed START
+    if (finalPosition < oldPosition) {
+      engine.applyPassStartBonus(playerId);
+    }
+
+    // Handle tile landing
+    setTimeout(() => {
+      const result = engine.handleTileLanding(finalPosition, playerId);
+      if (result === TileLandingResult.Next) {
+        engine.nextTurn();
       }
-    };
-  }, []);
+    }, 500);
+  }, [engine, calculateTokenPosition]);
+
+  const handleSubmitAnswer = useCallback((userAnswer: number) => {
+    const correct = engine.submitAnswer(userAnswer);
+
+    // Play audio feedback
+    if (correct) {
+      if (chimeAudioRef.current) {
+        const chime = chimeAudioRef.current.cloneNode() as HTMLAudioElement;
+        chime.playbackRate = 0.95 + Math.random() * 0.1;
+        chime.play().catch(e => console.log('Audio play failed:', e));
+      }
+
+      // Play celebration sound on streak
+      const state = engine.getState();
+      const currentPlayer = state.players[state.currentPlayer];
+      if (currentPlayer && currentPlayer.streak && currentPlayer.streak >= 3 && yayAudioRef.current.length > 0) {
+        const randomIndex = Math.floor(Math.random() * yayAudioRef.current.length);
+        const audio = yayAudioRef.current[randomIndex];
+        audio.currentTime = 0;
+        audio.play().catch(e => console.log('Audio play failed:', e));
+      }
+    }
+  }, [engine]);
+
+  const handleCloseMessage = useCallback(() => {
+    engine.closeMessage();
+    engine.nextTurn();
+  }, [engine]);
+
+  // ===== RENDER =====
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-500 to-purple-800 p-5">
@@ -687,30 +307,30 @@ export default function MathQuest() {
           <h1 className="mb-2.5 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-5xl font-bold text-transparent">
             Math Quest
           </h1>
-          {screen === 'playing' && (
+          {gameState.screen === GameScreen.Playing && (
             <div className="text-xl font-semibold text-black">
-              Round <span>{round}</span> of {maxRounds}
+              Round <span>{gameState.round}</span> of {gameState.config.maxRounds}
             </div>
           )}
         </div>
 
-        {screen === 'setup' && <GameSetup onStart={startGame} />}
+        {gameState.screen === GameScreen.Setup && <GameSetup onStart={handleStartGame} />}
 
-        {screen === 'playing' && (
+        {gameState.screen === GameScreen.Playing && (
           <>
             <div className="mb-8 flex flex-wrap justify-center gap-4">
-              {players.map((player, index) => (
+              {gameState.players.map((player, index) => (
                 <PlayerCard
                   key={player.id}
                   player={player}
-                  isActive={index === currentPlayer}
+                  isActive={index === gameState.currentPlayer}
                 />
               ))}
             </div>
 
             <div className="mx-auto max-w-[750px]">
-              <Board tiles={tiles}>
-                {players.map((player) => {
+              <Board tiles={gameState.tiles}>
+                {gameState.players.map((player) => {
                   const pos = playerPositions.get(player.id) || { left: 0, top: 0 };
                   return (
                     <PlayerToken
@@ -718,8 +338,8 @@ export default function MathQuest() {
                       player={player}
                       left={pos.left}
                       top={pos.top}
-                      isMoving={movingPlayer === player.id}
-                      isActive={player.id === currentPlayer && mathProblem === null}
+                      isMoving={gameState.movingPlayer === player.id}
+                      isActive={player.id === gameState.currentPlayer && gameState.mathProblem === null}
                     />
                   );
                 })}
@@ -727,47 +347,47 @@ export default function MathQuest() {
             </div>
 
             <Dice
-              value={diceValue}
-              isRolling={isRolling}
+              value={gameState.diceValue}
+              isRolling={gameState.isRolling}
               label={diceLabel}
-              onClick={rollDice}
+              onClick={handleRollDice}
             />
 
-            {bannerMessage && (
+            {gameState.bannerMessage && (
               <div
                 className={`mx-auto mt-5 max-w-md rounded-lg p-2.5 text-center font-bold ${
-                  bannerMessage.type === 'success'
+                  gameState.bannerMessage.type === 'success'
                     ? 'bg-green-100 text-green-800'
                     : 'bg-red-100 text-red-800'
                 }`}
               >
-                {bannerMessage.text}
+                {gameState.bannerMessage.text}
               </div>
             )}
           </>
         )}
 
-        {screen === 'gameOver' && (
-          <GameOver players={players} onPlayAgain={resetGame} />
+        {gameState.screen === GameScreen.GameOver && (
+          <GameOver players={gameState.players} onPlayAgain={() => engine.resetGame()} />
         )}
 
         <MathModal
-          isOpen={mathProblem !== null}
-          problem={mathProblem?.question || ''}
-          timeLeft={timeLeft}
-          onSubmit={submitAnswer}
-          timerEnabled={timerEnabled}
-          isPaused={isPaused}
-          onTogglePause={togglePause}
+          isOpen={gameState.mathProblem !== null}
+          problem={gameState.mathProblem?.question || ''}
+          timeLeft={gameState.timeLeft}
+          onSubmit={handleSubmitAnswer}
+          timerEnabled={gameState.config.timerEnabled}
+          isPaused={gameState.isPaused}
+          onTogglePause={() => engine.togglePause()}
         />
 
         <MessageModal
-          isOpen={message !== null && mathProblem === null}
-          message={message?.text || ''}
-          type={message?.type || 'success'}
-          streak={message?.streak}
-          onClose={closeMessageModal}
-          autoClose={autoCloseModal}
+          isOpen={gameState.message !== null && gameState.mathProblem === null}
+          message={gameState.message?.text || ''}
+          type={gameState.message?.type || 'success'}
+          streak={gameState.message?.streak}
+          onClose={handleCloseMessage}
+          autoClose={gameState.config.autoCloseModal}
         />
       </div>
     </div>

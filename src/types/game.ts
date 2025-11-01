@@ -1,3 +1,5 @@
+import { GameScreen, TileType, Difficulty } from '@/game/constants/enums';
+
 export interface Player {
   id: number;
   name: string;
@@ -24,13 +26,13 @@ export interface GameState {
   movesInRound: number;
 }
 
-export type GameScreen = 'setup' | 'playing' | 'gameOver';
+export { GameScreen, Difficulty };
 
 export interface TileData {
   index: number;
-  difficulty?: number;
+  difficulty?: Difficulty;
   points?: number;
-  type: 'corner' | 'regular';
+  type: TileType;
   label?: string;
   question?: string;
   answer?: number;
