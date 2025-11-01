@@ -48,7 +48,82 @@ export class GameEngine {
   // ===== GAME LIFECYCLE =====
 
   /**
-   * Start a new game
+   * Start avatar selection after player count is chosen
+   */
+  startAvatarSelection(
+    playerCount: number,
+    problems?: ImportedProblemsData,
+    config?: Partial<GameConfig>
+  ) {
+    // Store config for later use
+    const newConfig = { ...this.state.config, ...config };
+
+    this.setState({
+      screen: GameScreen.AvatarSelection,
+      avatarSelectionPlayerCount: playerCount,
+      avatarSelectionCurrentPlayer: 0,
+      selectedAvatars: [],
+      selectedColors: [],
+      importedProblems: problems || null,
+      config: newConfig,
+    });
+  }
+
+  /**
+   * Select avatar and color for current player
+   */
+  selectAvatar(avatarIndex: number, color: string) {
+    const newSelectedAvatars = [...this.state.selectedAvatars, avatarIndex];
+    const newSelectedColors = [...this.state.selectedColors, color];
+    const nextPlayer = this.state.avatarSelectionCurrentPlayer + 1;
+
+    // Check if all players have selected their avatars
+    if (nextPlayer >= this.state.avatarSelectionPlayerCount) {
+      // All avatars selected, start the game
+      this.startGameWithAvatars(newSelectedAvatars, newSelectedColors);
+    } else {
+      // Move to next player
+      this.setState({
+        selectedAvatars: newSelectedAvatars,
+        selectedColors: newSelectedColors,
+        avatarSelectionCurrentPlayer: nextPlayer,
+      });
+    }
+  }
+
+  /**
+   * Start the game with selected avatars and colors
+   */
+  private startGameWithAvatars(avatarIndices: number[], colors: string[]) {
+    // Initialize players with selected avatars and colors
+    const players = PlayerSystem.initializePlayersWithAvatars(avatarIndices, colors);
+
+    // Create board
+    const tiles = BoardSystem.createBoard(this.state.config.boardSize, this.state.importedProblems || undefined);
+
+    // Initialize problem pool
+    const { pool, usedIds } = ProblemSystem.initializeProblemPool(this.state.importedProblems || null);
+
+    this.setState({
+      screen: GameScreen.Playing,
+      players,
+      tiles,
+      currentPlayer: 0,
+      round: 1,
+      movesInRound: 0,
+      diceValue: 0,
+      problemPool: pool,
+      usedProblemIds: usedIds,
+      message: null,
+      bannerMessage: null,
+      mathProblem: null,
+      isRolling: false,
+      movingPlayer: null,
+    });
+  }
+
+  /**
+   * Start a new game (legacy method for backward compatibility)
    */
   startGame(
     playerCount: number,
@@ -220,16 +295,18 @@ export class GameEngine {
 
     // Handle corner bonus/challenge tiles
     if (position === SpecialTilePosition.Bonus) {
+      // Calculate doubled points based on difficulty
+      const difficulty = TileScoring[SpecialTilePosition.Bonus].difficulty;
+      const basePoints = difficulty * 10 + Math.floor(Math.random() * 20);
+      const bonusPoints = basePoints * 2; // Double the points!
+
       this.setState({
         bannerMessage: {
           text: TileScoring[SpecialTilePosition.Bonus].message,
           type: MessageType.Success
         }
       });
-      this.showMathProblem(
-        TileScoring[SpecialTilePosition.Bonus].difficulty,
-        TileScoring[SpecialTilePosition.Bonus].points
-      );
+      this.showMathProblem(difficulty, bonusPoints);
       return TileLandingResult.Math;
     }
 

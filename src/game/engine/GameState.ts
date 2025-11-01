@@ -29,6 +29,12 @@ export interface GameState {
   round: number;
   movesInRound: number;
 
+  // Avatar Selection
+  avatarSelectionPlayerCount: number;
+  avatarSelectionCurrentPlayer: number;
+  selectedAvatars: number[];
+  selectedColors: string[];
+
   // Players
   players: Player[];
 
@@ -65,6 +71,10 @@ export const createInitialState = (): GameState => ({
   currentPlayer: 0,
   round: 1,
   movesInRound: 0,
+  avatarSelectionPlayerCount: 0,
+  avatarSelectionCurrentPlayer: 0,
+  selectedAvatars: [],
+  selectedColors: [],
   players: [],
   tiles: [],
   diceValue: 0,

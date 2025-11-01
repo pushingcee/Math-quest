@@ -2,6 +2,7 @@
 
 import { Player } from '@/types/game';
 import { playerSprites } from './PlayerSprites';
+import { colorizePlayerSprite } from '@/game/utils/svgColorizer';
 
 interface PlayerTokenProps {
   player: Player;
@@ -12,6 +13,13 @@ interface PlayerTokenProps {
 }
 
 export default function PlayerToken({ player, left, top, isMoving, isActive }: PlayerTokenProps) {
+  // Get the colored sprite
+  const coloredSprite = colorizePlayerSprite(
+    player.avatarIndex,
+    playerSprites[player.avatarIndex],
+    player.color
+  );
+
   return (
     <div
       id={`player-${player.id}`}
@@ -46,7 +54,7 @@ export default function PlayerToken({ player, left, top, isMoving, isActive }: P
           style={{
             imageRendering: 'pixelated',
           } as React.CSSProperties}
-          dangerouslySetInnerHTML={{ __html: playerSprites[player.id] }}
+          dangerouslySetInnerHTML={{ __html: coloredSprite }}
         />
       </div>
     </div>

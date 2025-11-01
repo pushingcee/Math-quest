@@ -7,6 +7,7 @@ export interface Player {
   score: number;
   color: string;
   streak?: number;
+  avatarIndex: number;
 }
 
 export interface MathProblem {

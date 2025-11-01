@@ -4,7 +4,7 @@ const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'];
 
 export class PlayerSystem {
   /**
-   * Initialize players for a new game
+   * Initialize players for a new game (default avatars)
    */
   static initializePlayers(count: number): Player[] {
     const players: Player[] = [];
@@ -16,6 +16,26 @@ export class PlayerSystem {
         score: 0,
         color: playerColors[i],
         streak: 0,
+        avatarIndex: i, // Default to matching index
+      });
+    }
+    return players;
+  }
+
+  /**
+   * Initialize players with selected avatars and colors
+   */
+  static initializePlayersWithAvatars(avatarIndices: number[], colors: string[]): Player[] {
+    const players: Player[] = [];
+    for (let i = 0; i < avatarIndices.length; i++) {
+      players.push({
+        id: i,
+        name: `Player ${i + 1}`,
+        position: 0,
+        score: 0,
+        color: colors[i] || playerColors[i], // Use selected color or fallback
+        streak: 0,
+        avatarIndex: avatarIndices[i],
       });
     }
     return players;

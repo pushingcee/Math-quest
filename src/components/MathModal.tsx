@@ -8,6 +8,7 @@ import { convertMathToLatex } from '@/utils/mathToLatex';
 interface MathModalProps {
   isOpen: boolean;
   problem: string;
+  points?: number;
   timeLeft: number;
   onSubmit: (answer: number) => void;
   timerEnabled?: boolean;
@@ -15,7 +16,7 @@ interface MathModalProps {
   onTogglePause?: () => void;
 }
 
-export default function MathModal({ isOpen, problem, timeLeft, onSubmit, timerEnabled = true, isPaused = false, onTogglePause }: MathModalProps) {
+export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit, timerEnabled = true, isPaused = false, onTogglePause }: MathModalProps) {
   const [answer, setAnswer] = useState('');
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false);
   const mathRef = useRef<HTMLDivElement>(null);
@@ -107,6 +108,11 @@ export default function MathModal({ isOpen, problem, timeLeft, onSubmit, timerEn
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-[500px] animate-slide-in rounded-2xl bg-white p-6 text-center">
         <h2 className="mb-4 text-2xl font-bold text-black">Solve the Math Problem!</h2>
+        {points !== undefined && (
+          <div className="mb-3 inline-block rounded-lg bg-gradient-to-r from-purple-500 to-purple-700 px-6 py-2 text-xl font-bold text-white shadow-lg">
+            {points} Points
+          </div>
+        )}
         <div className="my-4 flex items-center justify-center gap-2 text-2xl font-bold text-black">
           <div ref={mathRef}></div>
           <span>= ?</span>

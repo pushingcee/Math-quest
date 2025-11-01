@@ -4,6 +4,7 @@
 
 export enum GameScreen {
   Setup = 'setup',
+  AvatarSelection = 'avatarSelection',
   Playing = 'playing',
   GameOver = 'gameOver',
 }

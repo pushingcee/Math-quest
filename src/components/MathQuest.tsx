@@ -7,6 +7,7 @@ import { TileLandingResult } from '@/game/constants/enums';
 import { GameEngine } from '@/game/engine/GameEngine';
 import { GameState } from '@/game/engine/GameState';
 import GameSetup from './GameSetup';
+import AvatarSelection from './AvatarSelection';
 import Board from './Board';
 import PlayerCard from './PlayerCard';
 import PlayerToken from './PlayerToken';
@@ -184,12 +185,16 @@ export default function MathQuest() {
     timerValue?: number,
     autoClose?: boolean
   ) => {
-    engine.startGame(playerCount, problems, {
+    engine.startAvatarSelection(playerCount, problems, {
       negativePointsEnabled: negativePoints !== undefined ? negativePoints : true,
       timerEnabled: enableTimer !== undefined ? enableTimer : false,
       timerDuration: timerValue !== undefined ? timerValue : 30,
       autoCloseModal: autoClose !== undefined ? autoClose : true,
     });
+  }, [engine]);
+
+  const handleSelectAvatar = useCallback((avatarIndex: number, color: string) => {
+    engine.selectAvatar(avatarIndex, color);
   }, [engine]);
 
   const handleRollDice = useCallback(() => {
@@ -316,6 +321,15 @@ export default function MathQuest() {
 
         {gameState.screen === GameScreen.Setup && <GameSetup onStart={handleStartGame} />}
 
+        {gameState.screen === GameScreen.AvatarSelection && (
+          <AvatarSelection
+            playerNumber={gameState.avatarSelectionCurrentPlayer + 1}
+            selectedAvatars={gameState.selectedAvatars}
+            selectedColors={gameState.selectedColors}
+            onSelectAvatar={handleSelectAvatar}
+          />
+        )}
+
         {gameState.screen === GameScreen.Playing && (
           <>
             <div className="mb-8 flex flex-wrap justify-center gap-4">
@@ -374,6 +388,7 @@ export default function MathQuest() {
         <MathModal
           isOpen={gameState.mathProblem !== null}
           problem={gameState.mathProblem?.question || ''}
+          points={gameState.mathProblem?.points}
           timeLeft={gameState.timeLeft}
           onSubmit={handleSubmitAnswer}
           timerEnabled={gameState.config.timerEnabled}
