@@ -35,6 +35,24 @@ export default function AvatarSelection({
   const handleAvatarClick = (index: number) => {
     if (!selectedAvatars.includes(index)) {
       setSelectedAvatarIndex(index);
+
+      // Set default color based on avatar
+      const defaultColors = [
+        '#e74c3c', // Knight → Red
+        '#3498db', // Wizard → Blue
+        '#2ecc71', // Archer → Green
+        '#f39c12', // Rogue → Orange
+      ];
+
+      const defaultColor = defaultColors[index];
+      // Only set default if that color isn't taken
+      if (!selectedColors.includes(defaultColor)) {
+        setSelectedColor(defaultColor);
+      } else {
+        // If default is taken, find first available color
+        const availableColor = AVAILABLE_COLORS.find(c => !selectedColors.includes(c.hex));
+        setSelectedColor(availableColor?.hex || null);
+      }
     }
   };
 
@@ -50,10 +68,12 @@ export default function AvatarSelection({
     }
   };
 
-  // Show avatar preview with selected color
-  const getPreviewSprite = () => {
-    if (selectedAvatarIndex === null || selectedColor === null) return null;
-    return colorizePlayerSprite(selectedAvatarIndex, playerSprites[selectedAvatarIndex], selectedColor);
+  // Get sprite with color applied if this avatar is selected and has a color
+  const getSpriteForDisplay = (index: number) => {
+    if (index === selectedAvatarIndex && selectedColor !== null) {
+      return colorizePlayerSprite(index, playerSprites[index], selectedColor);
+    }
+    return playerSprites[index];
   };
 
   return (
@@ -89,7 +109,7 @@ export default function AvatarSelection({
               >
                 <div
                   className="h-32 w-32"
-                  dangerouslySetInnerHTML={{ __html: sprite }}
+                  dangerouslySetInnerHTML={{ __html: getSpriteForDisplay(index) }}
                 />
                 <span className="text-lg font-semibold text-gray-700">
                   {avatarNames[index]}
@@ -146,24 +166,23 @@ export default function AvatarSelection({
         </div>
       </div>
 
-      {/* Preview and Confirm */}
-      {selectedAvatarIndex !== null && selectedColor !== null && (
-        <div className="mb-8">
-          <h3 className="mb-4 text-xl font-semibold text-gray-700">Preview</h3>
-          <div className="mb-4 flex justify-center">
-            <div
-              className="h-40 w-40"
-              dangerouslySetInnerHTML={{ __html: getPreviewSprite() || '' }}
-            />
-          </div>
-          <button
-            onClick={handleConfirm}
-            className="rounded-xl bg-gradient-to-r from-purple-500 to-purple-700 px-8 py-3 text-xl font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
-          >
-            Confirm Selection
-          </button>
-        </div>
-      )}
+      {/* Confirm Button */}
+      <div className="mt-6">
+        <button
+          onClick={handleConfirm}
+          disabled={selectedAvatarIndex === null || selectedColor === null}
+          className={`
+            rounded-xl px-8 py-3 text-xl font-bold text-white shadow-lg transition-all
+            ${
+              selectedAvatarIndex !== null && selectedColor !== null
+                ? 'bg-gradient-to-r from-purple-500 to-purple-700 hover:scale-105 hover:shadow-xl cursor-pointer'
+                : 'bg-gray-400 cursor-not-allowed opacity-50'
+            }
+          `}
+        >
+          Confirm Selection
+        </button>
+      </div>
     </div>
   );
 }
