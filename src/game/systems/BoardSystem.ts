@@ -59,7 +59,7 @@ export class BoardSystem {
 
           problem = {
             question: importedProblem.question.trim(),
-            answer: parseFloat(importedProblem.answer.trim())
+            answer: parseFloat(importedProblem.answer.trim().replace(/\s+/g, ''))
           };
         } else {
           problem = generateMathProblem(difficulty);

@@ -45,8 +45,9 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
       const isPlainText = /^(tz|тз)/i.test(problem.trim());
 
       if (isPlainText) {
-        // Display as plain text without KaTeX formatting
-        mathRef.current.textContent = problem;
+        // Display as plain text without KaTeX formatting, removing the "tz" or "тз" prefix
+        const textWithoutPrefix = problem.replace(/^(tz|тз)\s*/i, '');
+        mathRef.current.textContent = textWithoutPrefix;
         mathRef.current.style.whiteSpace = 'normal';
         mathRef.current.style.wordWrap = 'break-word';
       } else {
@@ -126,7 +127,7 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
         <div className="my-4 flex items-center justify-center gap-2 text-2xl font-bold text-black">
           <div
             ref={mathRef}
-            className="max-h-[200px] max-w-[350px] overflow-y-auto overflow-x-auto px-2 py-2 border border-gray-300 rounded-lg bg-gray-50 whitespace-normal break-words"
+            className="max-w-[350px] px-2 py-2 whitespace-normal break-words"
           ></div>
           <span className="shrink-0">= ?</span>
         </div>

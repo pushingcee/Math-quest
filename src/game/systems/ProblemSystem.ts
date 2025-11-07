@@ -39,8 +39,8 @@ export class ProblemSystem {
         console.log('Problem pool refilled');
       }
 
-      // Parse answer as number
-      const answer = parseFloat(importedProblem.answer.trim());
+      // Parse answer as number (remove spaces first, e.g., "1 055" -> "1055")
+      const answer = parseFloat(importedProblem.answer.trim().replace(/\s+/g, ''));
 
       console.log('Using imported problem:', importedProblem);
       return {

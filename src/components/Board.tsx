@@ -9,9 +9,10 @@ import { convertMathToLatex } from '@/utils/mathToLatex';
 interface BoardProps {
   tiles: TileData[];
   children?: React.ReactNode;
+  displayProblemsInTiles?: boolean;
 }
 
-export default function Board({ tiles, children }: BoardProps) {
+export default function Board({ tiles, children, displayProblemsInTiles = true }: BoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -21,20 +22,20 @@ export default function Board({ tiles, children }: BoardProps) {
       className="relative mx-auto grid aspect-square w-full grid-cols-11 grid-rows-11 gap-0 rounded-xl bg-slate-700 p-2 auto-rows-fr auto-cols-fr"
     >
       {tiles.map((tile) => (
-        <Tile key={tile.index} tile={tile} />
+        <Tile key={tile.index} tile={tile} displayProblem={displayProblemsInTiles} />
       ))}
       {children}
     </div>
   );
 }
 
-function Tile({ tile }: { tile: TileData }) {
+function Tile({ tile, displayProblem = true }: { tile: TileData; displayProblem?: boolean }) {
   const { index, difficulty, points, type, label, question } = tile;
   const mathRef = useRef<HTMLDivElement>(null);
 
   // Render math with KaTeX
   useEffect(() => {
-    if (mathRef.current && question) {
+    if (mathRef.current && question && displayProblem) {
       const latexExpression = convertMathToLatex(question);
       const displayText = `$${latexExpression}$`;
       mathRef.current.textContent = displayText;
@@ -51,7 +52,7 @@ function Tile({ tile }: { tile: TileData }) {
         console.error('KaTeX rendering error:', error);
       }
     }
-  }, [question]);
+  }, [question, displayProblem]);
 
   const getGridPosition = () => {
     if (index === 0) {
@@ -107,7 +108,7 @@ function Tile({ tile }: { tile: TileData }) {
       className="relative flex cursor-pointer flex-col items-center justify-center border border-slate-600 bg-white p-2 text-center text-xs transition-all hover:z-10 hover:scale-105 hover:shadow-lg"
     >
       <div ref={mathRef} className="text-[0.6rem] text-black sm:text-xs leading-tight">
-        {question}
+        {displayProblem ? question : '?'}
       </div>
       <div className="mt-0.5 text-[0.55rem] font-bold text-purple-600 sm:text-[0.65rem]">
         {points}pts

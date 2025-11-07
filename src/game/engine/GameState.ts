@@ -7,6 +7,7 @@ export interface GameConfig {
   timerEnabled: boolean;
   timerDuration: number;
   autoCloseModal: boolean;
+  displayProblemsInTiles: boolean;
   maxRounds: number;
   boardSize: number;
 }
@@ -91,6 +92,7 @@ export const createInitialState = (): GameState => ({
     timerEnabled: false,
     timerDuration: 30,
     autoCloseModal: true,
+    displayProblemsInTiles: true,
     maxRounds: 10,
     boardSize: 40,
   },

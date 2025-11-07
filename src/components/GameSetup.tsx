@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
 
 interface GameSetupProps {
-  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number, autoCloseModal?: boolean) => void;
+  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number, autoCloseModal?: boolean, displayProblemsInTiles?: boolean) => void;
 }
 
 export default function GameSetup({ onStart }: GameSetupProps) {
@@ -16,6 +16,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timerValue, setTimerValue] = useState<number | string>(30);
   const [autoCloseModal, setAutoCloseModal] = useState(false);
+  const [displayProblemsInTiles, setDisplayProblemsInTiles] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -57,7 +58,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
   const handleStart = () => {
     // Ensure timerValue is a valid number
     const validTimerValue = typeof timerValue === 'string' ? parseInt(timerValue) || 30 : timerValue;
-    onStart(playerCount, importedProblems || undefined, negativePoints, timerEnabled, validTimerValue, autoCloseModal);
+    onStart(playerCount, importedProblems || undefined, negativePoints, timerEnabled, validTimerValue, autoCloseModal, displayProblemsInTiles);
   };
 
   return (
@@ -140,6 +141,18 @@ export default function GameSetup({ onStart }: GameSetupProps) {
             className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
           />
           <span className="font-medium">Enable Modal Auto-Close</span>
+        </label>
+      </div>
+
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <label className="flex cursor-pointer items-center gap-2 text-lg text-black">
+          <input
+            type="checkbox"
+            checked={displayProblemsInTiles}
+            onChange={(e) => setDisplayProblemsInTiles(e.target.checked)}
+            className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
+          />
+          <span className="font-medium">Display Problems in Tiles</span>
         </label>
       </div>
 

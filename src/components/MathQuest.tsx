@@ -183,13 +183,15 @@ export default function MathQuest() {
     negativePoints?: boolean,
     enableTimer?: boolean,
     timerValue?: number,
-    autoClose?: boolean
+    autoClose?: boolean,
+    displayProblemsInTiles?: boolean
   ) => {
     engine.startAvatarSelection(playerCount, problems, {
       negativePointsEnabled: negativePoints !== undefined ? negativePoints : true,
       timerEnabled: enableTimer !== undefined ? enableTimer : false,
       timerDuration: timerValue !== undefined ? timerValue : 30,
       autoCloseModal: autoClose !== undefined ? autoClose : true,
+      displayProblemsInTiles: displayProblemsInTiles !== undefined ? displayProblemsInTiles : true,
     });
   }, [engine]);
 
@@ -344,7 +346,7 @@ export default function MathQuest() {
             </div>
 
             <div className="mx-auto max-w-[750px]">
-              <Board tiles={gameState.tiles}>
+              <Board tiles={gameState.tiles} displayProblemsInTiles={gameState.config.displayProblemsInTiles}>
                 {gameState.players.map((player) => {
                   const pos = playerPositions.get(player.id) || { left: 0, top: 0 };
                   return (
