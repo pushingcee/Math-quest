@@ -28,7 +28,7 @@ export default function AvatarSelection({
   selectedColors,
   onSelectAvatar,
 }: AvatarSelectionProps) {
-  const avatarNames = ['Knight', 'Wizard', 'Archer', 'Rogue'];
+  const avatarNames = ['Knight', 'Wizard', 'Archer', 'Rogue', 'Jester'];
   const [selectedAvatarIndex, setSelectedAvatarIndex] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
@@ -42,6 +42,7 @@ export default function AvatarSelection({
         '#3498db', // Wizard → Blue
         '#2ecc71', // Archer → Green
         '#f39c12', // Rogue → Orange
+        '#9b59b6', // Jester → Purple
       ];
 
       const defaultColor = defaultColors[index];

@@ -42,12 +42,21 @@ export class PlayerSystem {
   }
 
   /**
-   * Move player to new position
+   * Move player to new position, skipping corner tiles
    */
   static movePlayerToPosition(player: Player, newPosition: number, boardSize: number): Player {
+    // Corner tiles are at positions 0, 10, 20, 30
+    const cornerTiles = [0, 10, 20, 30];
+    let finalPosition = newPosition % boardSize;
+
+    // If landing on a corner tile, skip to the next non-corner tile
+    while (cornerTiles.includes(finalPosition)) {
+      finalPosition = (finalPosition + 1) % boardSize;
+    }
+
     return {
       ...player,
-      position: newPosition % boardSize
+      position: finalPosition
     };
   }
 

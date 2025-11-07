@@ -18,7 +18,7 @@ export default function Board({ tiles, children }: BoardProps) {
     <div
       ref={boardRef}
       id="board"
-      className="relative mx-auto grid aspect-square max-w-[750px] grid-cols-11 grid-rows-11 gap-0.5 rounded-xl bg-slate-700 p-0.5"
+      className="relative mx-auto grid aspect-square w-full grid-cols-11 grid-rows-11 gap-0 rounded-xl bg-slate-700 p-2 auto-rows-fr auto-cols-fr"
     >
       {tiles.map((tile) => (
         <Tile key={tile.index} tile={tile} />
@@ -92,7 +92,7 @@ function Tile({ tile }: { tile: TileData }) {
       <div
         data-index={index}
         style={position}
-        className="flex flex-col items-center justify-center rounded-sm bg-gradient-to-br from-pink-400 to-rose-500 p-1.5 text-center text-xs font-bold text-white transition-all hover:z-10 hover:scale-105 hover:shadow-lg sm:text-sm"
+        className="flex flex-col items-center justify-center rounded-sm bg-gradient-to-br from-pink-400 to-rose-500 p-4 text-center text-xs font-bold text-white transition-all hover:z-10 hover:scale-105 hover:shadow-lg sm:text-sm"
         dangerouslySetInnerHTML={{ __html: label || '' }}
       />
     );
@@ -104,7 +104,7 @@ function Tile({ tile }: { tile: TileData }) {
       data-difficulty={difficulty}
       data-points={points}
       style={position}
-      className="relative flex cursor-pointer flex-col items-center justify-center border border-slate-600 bg-white p-0.5 text-center text-xs transition-all hover:z-10 hover:scale-105 hover:shadow-lg"
+      className="relative flex cursor-pointer flex-col items-center justify-center border border-slate-600 bg-white p-2 text-center text-xs transition-all hover:z-10 hover:scale-105 hover:shadow-lg"
     >
       <div ref={mathRef} className="text-[0.6rem] text-black sm:text-xs leading-tight">
         {question}

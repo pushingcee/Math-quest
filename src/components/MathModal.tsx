@@ -41,25 +41,35 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
   // Render math with KaTeX auto-render
   useEffect(() => {
     if (mathRef.current && problem) {
-      // Convert plain math to LaTeX and wrap in delimiters
-      const latexExpression = convertMathToLatex(problem);
-      const displayText = `$${latexExpression}$`;
+      // Check if problem starts with "tz" or "тз" (case insensitive)
+      const isPlainText = /^(tz|тз)/i.test(problem.trim());
 
-      // Set the text content first
-      mathRef.current.textContent = displayText;
+      if (isPlainText) {
+        // Display as plain text without KaTeX formatting
+        mathRef.current.textContent = problem;
+        mathRef.current.style.whiteSpace = 'normal';
+        mathRef.current.style.wordWrap = 'break-word';
+      } else {
+        // Convert plain math to LaTeX and wrap in delimiters
+        const latexExpression = convertMathToLatex(problem);
+        const displayText = `$${latexExpression}$`;
 
-      try {
-        // Auto-render will find $...$ and $$...$$ delimiters and render them
-        renderMathInElement(mathRef.current, {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false},
-          ],
-          throwOnError: false,
-        });
-      } catch (error) {
-        console.error('KaTeX rendering error:', error);
-        // Text content is already set, so it will just show as plain text
+        // Set the text content first
+        mathRef.current.textContent = displayText;
+
+        try {
+          // Auto-render will find $...$ and $$...$$ delimiters and render them
+          renderMathInElement(mathRef.current, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false},
+            ],
+            throwOnError: false,
+          });
+        } catch (error) {
+          console.error('KaTeX rendering error:', error);
+          // Text content is already set, so it will just show as plain text
+        }
       }
     }
   }, [problem]);
@@ -114,8 +124,11 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
           </div>
         )}
         <div className="my-4 flex items-center justify-center gap-2 text-2xl font-bold text-black">
-          <div ref={mathRef}></div>
-          <span>= ?</span>
+          <div
+            ref={mathRef}
+            className="max-h-[200px] max-w-[350px] overflow-y-auto overflow-x-auto px-2 py-2 border border-gray-300 rounded-lg bg-gray-50 whitespace-normal break-words"
+          ></div>
+          <span className="shrink-0">= ?</span>
         </div>
         {timerEnabled && (
           <div className="my-2 flex items-center justify-center gap-3">

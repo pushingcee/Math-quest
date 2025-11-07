@@ -8,6 +8,7 @@ const ACCENT_COLOR_MAP: Record<number, string> = {
   1: '#3498db', // Wizard - blue
   2: '#2ecc71', // Archer - green
   3: '#f39c12', // Rogue - orange
+  4: '#9b59b6', // Jester - purple
 };
 
 /**

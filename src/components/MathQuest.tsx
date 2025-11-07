@@ -107,10 +107,10 @@ export default function MathQuest() {
     ).length;
 
     const offsetX = otherPlayersOnTile * 20 - 10;
-    const offsetY = otherPlayersOnTile * 8;
+    const offsetY = otherPlayersOnTile * 20;
 
     const relativeLeft = tileRect.left - boardRect.left + tileRect.width / 2 - 32 + offsetX;
-    const relativeTop = tileRect.top - boardRect.top + tileRect.height / 2 - 32 + offsetY;
+    const relativeTop = tileRect.top - boardRect.top + tileRect.height / 2 - 32 - offsetY;
 
     return { left: relativeLeft, top: relativeTop };
   }, []);
@@ -259,16 +259,17 @@ export default function MathQuest() {
     engine.completePlayerMovement();
 
     const finalState = engine.getState();
-    const finalPosition = (oldPosition + steps) % finalState.config.boardSize;
+    const actualPosition = finalState.players[playerId]?.position ?? 0;
+    const calculatedPosition = (oldPosition + steps) % finalState.config.boardSize;
 
     // Check if passed START
-    if (finalPosition < oldPosition) {
+    if (calculatedPosition < oldPosition) {
       engine.applyPassStartBonus(playerId);
     }
 
-    // Handle tile landing
+    // Handle tile landing using the actual position (which skips corner tiles)
     setTimeout(() => {
-      const result = engine.handleTileLanding(finalPosition, playerId);
+      const result = engine.handleTileLanding(actualPosition, playerId);
       if (result === TileLandingResult.Next) {
         engine.nextTurn();
       }

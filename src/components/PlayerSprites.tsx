@@ -49,7 +49,23 @@ export const playerSprites = [
     <rect x="21" y="14" width="4" height="2" fill="#c0c0c0"/>
     <rect x="25" y="13" width="1" height="4" fill="#c0c0c0"/>
     <polygon points="15,7 14,6 17,6 16,7" fill="#f39c12"/> fill = accent
+  </svg>`,
+  // Jester sprite (purple)
+  `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="16" cy="10" r="3" fill="#fdbcb4"/>
+    <circle cx="16" cy="10" r="1" fill="#000"/>
+    <polygon points="12,6 14,4 16,5 18,4 20,6 18,8 16,7 14,8" fill="#9b59b6"/> fill = accent
+    <circle cx="11" cy="5" r="1" fill="#ffd700"/>
+    <circle cx="21" cy="5" r="1" fill="#ffd700"/>
+    <circle cx="16" cy="3" r="1" fill="#ffd700"/>
+    <rect x="11" y="13" width="10" height="8" fill="#9b59b6"/> fill = accent
+    <rect x="12" y="14" width="3" height="2" fill="#f39c12"/>
+    <rect x="17" y="14" width="3" height="2" fill="#f39c12"/>
+    <rect x="13" y="24" width="3" height="3" fill="#444"/>
+    <rect x="17" y="24" width="3" height="3" fill="#444"/>
+    <polygon points="10,20 10,22 9,23 10,24 12,23 12,21" fill="#e74c3c"/>
+    <polygon points="22,20 22,22 23,23 22,24 20,23 20,21" fill="#e74c3c"/>
   </svg>`
 ];
 
-export const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'];
+export const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
