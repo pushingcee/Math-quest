@@ -1,4 +1,4 @@
-import { GameScreen, TileType, Difficulty } from '@/game/constants/enums';
+import { GameScreen, TileType, Difficulty, ObstacleType } from '@/game/constants/enums';
 
 export interface Player {
   id: number;
@@ -27,7 +27,7 @@ export interface GameState {
   movesInRound: number;
 }
 
-export { GameScreen, Difficulty };
+export { GameScreen, Difficulty, TileType };
 
 export interface TileData {
   index: number;
@@ -37,4 +37,5 @@ export interface TileData {
   label?: string;
   question?: string;
   answer?: number;
+  obstacleType?: ObstacleType;
 }

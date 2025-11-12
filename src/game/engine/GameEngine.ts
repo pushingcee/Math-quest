@@ -1,12 +1,13 @@
 import { GameState, GameConfig, createInitialState } from './GameState';
 import { Player, MathProblem, Difficulty } from '@/types/game';
 import { ImportedProblemsData } from '@/types/imported-problems';
-import { GameScreen, MessageType, SpecialTilePosition, TileScoring, TileLandingResult } from '../constants/enums';
+import { GameScreen, MessageType, SpecialTilePosition, TileScoring, TileLandingResult, TileType } from '../constants/enums';
 import { BoardSystem } from '../systems/BoardSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { ProblemSystem } from '../systems/ProblemSystem';
 import { ScoringSystem } from '../systems/ScoringSystem';
 import { TurnSystem } from '../systems/TurnSystem';
+import { ObstacleSystem } from '../systems/ObstacleSystem';
 
 export type StateChangeListener = (state: GameState) => void;
 
@@ -267,6 +268,30 @@ export class GameEngine {
   handleTileLanding(position: number, playerId: number): TileLandingResult {
     const tile = this.state.tiles[position];
     if (!tile) return TileLandingResult.Next;
+
+    // Handle obstacle tiles first
+    if (tile.type === TileType.Obstacle && tile.obstacleType) {
+      const player = this.state.players[playerId];
+      if (player) {
+        const { player: updatedPlayer, message } = ObstacleSystem.applyObstacleEffect(
+          player,
+          tile.obstacleType,
+          this.state.config.boardSize
+        );
+
+        const newPlayers = [...this.state.players];
+        newPlayers[playerId] = updatedPlayer;
+
+        this.setState({
+          players: newPlayers,
+          message: {
+            text: message,
+            type: MessageType.Error
+          }
+        });
+      }
+      return TileLandingResult.Next;
+    }
 
     // Handle special tiles
     const specialScore = ScoringSystem.calculateSpecialTileScore(position);

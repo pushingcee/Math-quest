@@ -17,6 +17,12 @@ export enum MessageType {
 export enum TileType {
   Corner = 'corner',
   Regular = 'regular',
+  Obstacle = 'obstacle',
+}
+
+export enum ObstacleType {
+  Slip = 'slip',
+  Trap = 'trap',
 }
 
 export enum SpecialTilePosition {

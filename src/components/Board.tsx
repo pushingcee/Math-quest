@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { TileData } from '@/types/game';
+import { TileType, ObstacleType, SpecialTilePosition } from '@/game/constants/enums';
 import renderMathInElement from 'katex/contrib/auto-render';
 import 'katex/dist/katex.min.css';
 import { convertMathToLatex } from '@/utils/mathToLatex';
@@ -88,14 +89,34 @@ function Tile({ tile, displayProblem = true }: { tile: TileData; displayProblem?
 
   const position = getGridPosition();
 
-  if (type === 'corner') {
+  if (type === TileType.Corner) {
+    return (
+      <div
+        data-index={index}
+        style={{
+          ...position,
+          zIndex: 20,
+        }}
+        className="flex flex-col items-center justify-center rounded-sm bg-gradient-to-br from-pink-400 to-rose-500 p-4 text-center text-xs font-bold text-white transition-all opacity-30 hover:z-30 hover:scale-105 hover:shadow-lg sm:text-sm"
+        dangerouslySetInnerHTML={{ __html: label || '' }}
+      />
+    );
+  }
+
+  // Handle obstacle tiles
+  if (type === TileType.Obstacle) {
+    const isSlip = tile.obstacleType === ObstacleType.Slip;
+    const bgColor = isSlip ? 'bg-blue-100' : 'bg-red-100';
+    const emoji = isSlip ? '🧊' : '⚠️';
+
     return (
       <div
         data-index={index}
         style={position}
-        className="flex flex-col items-center justify-center rounded-sm bg-gradient-to-br from-pink-400 to-rose-500 p-4 text-center text-xs font-bold text-white transition-all hover:z-10 hover:scale-105 hover:shadow-lg sm:text-sm"
-        dangerouslySetInnerHTML={{ __html: label || '' }}
-      />
+        className={`flex flex-col items-center justify-center border border-slate-600 ${bgColor} p-2 text-center text-2xl transition-all hover:z-10 hover:scale-105 hover:shadow-lg`}
+      >
+        {emoji}
+      </div>
     );
   }
 

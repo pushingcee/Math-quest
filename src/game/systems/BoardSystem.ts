@@ -1,6 +1,6 @@
 import { TileData, Difficulty } from '@/types/game';
 import { ImportedProblemsData } from '@/types/imported-problems';
-import { TileType, SpecialTilePosition, TileScoring } from '../constants/enums';
+import { TileType, SpecialTilePosition, TileScoring, ObstacleType } from '../constants/enums';
 import { generateMathProblem } from '../utils/mathGenerator';
 
 export class BoardSystem {
@@ -15,6 +15,10 @@ export class BoardSystem {
 
     // Create a pool of imported problems if available
     let problemsPool = problems ? [...problems.problems] : [];
+
+    // Define static obstacle positions
+    const slipPositions = [7, 28];  // Ice tiles (slip)
+    const trapPositions = [18, 38]; // Trap tiles
 
     for (let i = 0; i < boardSize; i++) {
       if (i === SpecialTilePosition.Start) {
@@ -40,6 +44,18 @@ export class BoardSystem {
           index: i,
           type: TileType.Corner,
           label: TileScoring[SpecialTilePosition.Penalty].label
+        });
+      } else if (slipPositions.includes(i)) {
+        newTiles.push({
+          index: i,
+          type: TileType.Obstacle,
+          obstacleType: ObstacleType.Slip
+        });
+      } else if (trapPositions.includes(i)) {
+        newTiles.push({
+          index: i,
+          type: TileType.Obstacle,
+          obstacleType: ObstacleType.Trap
         });
       } else {
         const difficulty = (Math.floor(Math.random() * 3) + 1) as Difficulty;

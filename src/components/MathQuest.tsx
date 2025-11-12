@@ -243,13 +243,16 @@ export default function MathQuest() {
       await new Promise((resolve) => setTimeout(resolve, 400));
 
       const currentState = engine.getState();
-      const newPosition = (oldPosition + step) % currentState.config.boardSize;
+      const currentPosition = currentState.players[playerId]?.position ?? oldPosition;
+      // Move one step forward from current position, accounting for any skips
+      const newPosition = (currentPosition + 1) % currentState.config.boardSize;
       const passedStart = engine.movePlayerStep(playerId, newPosition);
 
       // Update visual position
       setTimeout(() => {
         const freshState = engine.getState();
-        const pos = calculateTokenPosition(newPosition, playerId, freshState.players);
+        const actualPlayerPosition = freshState.players[playerId]?.position ?? newPosition;
+        const pos = calculateTokenPosition(actualPlayerPosition, playerId, freshState.players);
         setPlayerPositions((prev) => {
           const newMap = new Map(prev);
           newMap.set(playerId, pos);
@@ -271,8 +274,24 @@ export default function MathQuest() {
 
     // Handle tile landing using the actual position (which skips corner tiles)
     setTimeout(() => {
-      const result = engine.handleTileLanding(actualPosition, playerId);
-      if (result === TileLandingResult.Next) {
+      // Verify position is not a corner tile before handling landing
+      const cornerTiles = [0, 10, 20, 30];
+      if (!cornerTiles.includes(actualPosition)) {
+        const result = engine.handleTileLanding(actualPosition, playerId);
+        if (result === TileLandingResult.Next) {
+          // Wait for message modal to display before advancing (if obstacle tile)
+          const state = engine.getState();
+          if (state.message !== null) {
+            // Wait for user to close modal or auto-close (2.5s) before next turn
+            setTimeout(() => {
+              engine.nextTurn();
+            }, 2600);
+          } else {
+            engine.nextTurn();
+          }
+        }
+      } else {
+        // Corner tile - just advance to next turn
         engine.nextTurn();
       }
     }, 500);
