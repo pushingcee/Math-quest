@@ -1,4 +1,5 @@
 import { Player } from '@/types/game';
+import { ItemSystem } from './ItemSystem';
 
 const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'];
 
@@ -9,6 +10,7 @@ export class PlayerSystem {
   static initializePlayers(count: number): Player[] {
     const players: Player[] = [];
     for (let i = 0; i < count; i++) {
+      const { coins, inventory } = ItemSystem.initializePlayerInventory();
       players.push({
         id: i,
         name: `Player ${i + 1}`,
@@ -17,6 +19,8 @@ export class PlayerSystem {
         color: playerColors[i],
         streak: 0,
         avatarIndex: i, // Default to matching index
+        coins,
+        inventory,
       });
     }
     return players;
@@ -28,6 +32,7 @@ export class PlayerSystem {
   static initializePlayersWithAvatars(avatarIndices: number[], colors: string[]): Player[] {
     const players: Player[] = [];
     for (let i = 0; i < avatarIndices.length; i++) {
+      const { coins, inventory } = ItemSystem.initializePlayerInventory();
       players.push({
         id: i,
         name: `Player ${i + 1}`,
@@ -36,6 +41,8 @@ export class PlayerSystem {
         color: colors[i] || playerColors[i], // Use selected color or fallback
         streak: 0,
         avatarIndex: avatarIndices[i],
+        coins,
+        inventory,
       });
     }
     return players;

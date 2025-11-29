@@ -18,6 +18,7 @@ export enum TileType {
   Corner = 'corner',
   Regular = 'regular',
   Obstacle = 'obstacle',
+  Shop = 'shop',
 }
 
 export enum ObstacleType {
@@ -30,6 +31,10 @@ export enum SpecialTilePosition {
   Bonus = 10,
   Challenge = 20,
   Penalty = 30,
+  Shop1 = 19,
+  Shop2 = 20,
+  Shop3 = 29,
+  Shop4 = 30,
 }
 
 export enum Difficulty {

@@ -6,6 +6,9 @@ import { ImportedProblemsData } from '@/types/imported-problems';
 import { TileLandingResult } from '@/game/constants/enums';
 import { GameEngine } from '@/game/engine/GameEngine';
 import { GameState } from '@/game/engine/GameState';
+import { ItemType, ITEM_CATALOG } from '@/types/items';
+import { ItemSystem } from '@/game/systems/ItemSystem';
+import { DevTools } from '@/game/debug/devtools';
 import GameSetup from './GameSetup';
 import AvatarSelection from './AvatarSelection';
 import Board from './Board';
@@ -15,6 +18,10 @@ import Dice from './Dice';
 import MathModal from './MathModal';
 import MessageModal from './MessageModal';
 import GameOver from './GameOver';
+import ShopDrawer from './ShopDrawer';
+import ItemPrompt from './ItemPrompt';
+import DiceChoicePrompt from './DiceChoicePrompt';
+import TeleporterPrompt from './TeleporterPrompt';
 
 export default function MathQuest() {
   // Create game engine instance (persists across renders)
@@ -26,6 +33,7 @@ export default function MathQuest() {
   // UI-specific state (not part of game logic)
   const [playerPositions, setPlayerPositions] = useState<Map<number, { left: number; top: number }>>(new Map());
   const [diceLabel, setDiceLabel] = useState('Click to Roll!');
+  const [suppressDiceSound, setSuppressDiceSound] = useState(false);
 
   // Refs for audio and DOM
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -131,7 +139,7 @@ export default function MathQuest() {
       const timer = setTimeout(updatePlayerPositions, 100);
       return () => clearTimeout(timer);
     }
-  }, [gameState.screen, gameState.tiles, updatePlayerPositions, gameState.players.length]);
+  }, [gameState.screen, gameState.tiles, updatePlayerPositions, gameState.players]);
 
   // Auto-dismiss banner message
   useEffect(() => {
@@ -142,6 +150,20 @@ export default function MathQuest() {
       return () => clearTimeout(timer);
     }
   }, [gameState.bannerMessage, engine]);
+
+  // Activate teleporter mode if current player has a teleporter and it's their turn
+  useEffect(() => {
+    const currentPlayer = gameState.players[gameState.currentPlayer];
+    if (
+      currentPlayer &&
+      !gameState.teleporterActive &&
+      !gameState.pendingItemUse &&
+      gameState.diceValue === 0 &&
+      ItemSystem.hasItem(currentPlayer, ItemType.Teleport)
+    ) {
+      engine.activateTeleporter();
+    }
+  }, [gameState.currentPlayer, gameState.players, gameState.teleporterActive, gameState.pendingItemUse, gameState.diceValue, engine]);
 
   // Helper to get audio path
   const getAudioPath = useCallback((filename: string) => {
@@ -197,29 +219,6 @@ export default function MathQuest() {
 
   const handleSelectAvatar = useCallback((avatarIndex: number, color: string) => {
     engine.selectAvatar(avatarIndex, color);
-  }, [engine]);
-
-  const handleRollDice = useCallback(() => {
-    const value = engine.rollDice();
-    if (value === 0) return; // Invalid roll
-
-    // Play dice sound
-    if (diceAudioRef.current.length > 0) {
-      const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
-      const audio = diceAudioRef.current[randomIndex];
-      audio.currentTime = 0;
-      audio.play().catch(e => console.log('Audio play failed:', e));
-    }
-
-    // Complete dice roll after animation
-    setTimeout(() => {
-      engine.completeDiceRoll(value);
-
-      // Wait to show result, then move player
-      setTimeout(() => {
-        handleMovePlayer(value);
-      }, 500);
-    }, 500);
   }, [engine]);
 
   const handleMovePlayer = useCallback(async (steps: number) => {
@@ -297,6 +296,41 @@ export default function MathQuest() {
     }, 500);
   }, [engine, calculateTokenPosition]);
 
+  const handleRollDice = useCallback(() => {
+    console.log('🎲 handleRollDice called', { suppressDiceSound, lastRollWasLuckyDice: gameState.lastRollWasLuckyDice });
+
+    // Check if player has Lucky Dice item to use
+    const hasLuckyDice = engine.checkForDiceItem();
+    if (hasLuckyDice) {
+      console.log('Lucky Dice item found, returning early');
+      return; // Wait for item prompt response
+    }
+
+    const value = engine.rollDice();
+    if (value === 0) return; // Invalid roll
+
+    // Play dice sound only if not suppressed and not a Lucky Dice result
+    if (!suppressDiceSound && !gameState.lastRollWasLuckyDice && diceAudioRef.current.length > 0) {
+      console.log('🔊 Playing dice sound');
+      const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
+      const audio = diceAudioRef.current[randomIndex];
+      audio.currentTime = 0;
+      audio.play().catch(e => console.log('Audio play failed:', e));
+    } else {
+      console.log('🔇 Sound suppressed', { suppressDiceSound, lastRollWasLuckyDice: gameState.lastRollWasLuckyDice });
+    }
+
+    // Complete dice roll after animation
+    setTimeout(() => {
+      engine.completeDiceRoll(value);
+
+      // Wait to show result, then move player
+      setTimeout(() => {
+        handleMovePlayer(value);
+      }, 500);
+    }, 500);
+  }, [engine, handleMovePlayer, gameState.lastRollWasLuckyDice, suppressDiceSound]);
+
   const handleSubmitAnswer = useCallback((userAnswer: number) => {
     const correct = engine.submitAnswer(userAnswer);
 
@@ -324,6 +358,91 @@ export default function MathQuest() {
     engine.closeMessage();
     engine.nextTurn();
   }, [engine]);
+
+  const handlePurchaseItem = useCallback((itemType: ItemType) => {
+    const success = engine.purchaseItem(itemType);
+    if (success) {
+      // Close shop
+      engine.closeShop();
+
+      // Teleporter will auto-activate on next turn via useEffect
+      // ExtraDiceRoll is consumed immediately
+      if (itemType === ItemType.ExtraDiceRoll) {
+        engine.useItem(itemType);
+      } else if (itemType !== ItemType.Teleport) {
+        // Other items get a confirmation prompt
+        engine.promptItemUse(itemType, 'math');
+      }
+    }
+  }, [engine]);
+
+  const handleCloseShop = useCallback(() => {
+    engine.closeShop();
+    engine.nextTurn();
+  }, [engine]);
+
+  const handleUseItem = useCallback((itemType: ItemType) => {
+    if (itemType === ItemType.Teleport) {
+      // For Teleporter, activate selection mode (activateTeleporter also updates context)
+      engine.activateTeleporter();
+    } else {
+      engine.useItem(itemType);
+    }
+  }, [engine]);
+
+  const handleDeclineItem = useCallback(() => {
+    const state = engine.getState();
+    // If declining a Teleporter (context: teleport), advance turn; others just clear the prompt
+    if (state.pendingItemUse?.context === 'teleport') {
+      engine.declineItemUse();
+      engine.nextTurn();
+    } else {
+      engine.declineItemUse();
+    }
+  }, [engine]);
+
+  const handleDiceChoice = useCallback((chosenRoll: number) => {
+    // Stop ALL audio immediately
+    diceAudioRef.current.forEach(audio => {
+      audio.pause();
+      audio.currentTime = 0;
+    });
+    yayAudioRef.current.forEach(audio => {
+      audio.pause();
+      audio.currentTime = 0;
+    });
+    if (chimeAudioRef.current) {
+      chimeAudioRef.current.pause();
+      chimeAudioRef.current.currentTime = 0;
+    }
+
+    // Suppress dice sound while moving player
+    setSuppressDiceSound(true);
+
+    // Use the Lucky Dice and set the chosen value
+    engine.useLuckyDice(chosenRoll);
+
+    // Continue immediately without animation
+    handleMovePlayer(chosenRoll);
+
+    // Re-enable sound after a delay
+    setTimeout(() => {
+      setSuppressDiceSound(false);
+    }, 2000);
+  }, [engine, handleMovePlayer]);
+
+  // Expose debug tools in development (after all handlers are defined)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      const devTools = new DevTools(engine);
+      (window as any).__gameDebug = devTools;
+      // Expose the movement trigger for debug tools
+      (window as any).__triggerMove = handleMovePlayer;
+      console.log('%c💾 Game Debug Tools Loaded', 'color: #00ff00; font-weight: bold;');
+      console.log('%cType __gameDebug.help() for available commands', 'color: #00ffff;');
+      devTools.help();
+    }
+  }, [engine, handleMovePlayer]);
 
   // ===== RENDER =====
 
@@ -365,7 +484,14 @@ export default function MathQuest() {
             </div>
 
             <div className="mx-auto max-w-[750px]">
-              <Board tiles={gameState.tiles} displayProblemsInTiles={gameState.config.displayProblemsInTiles}>
+              <Board
+                tiles={gameState.tiles}
+                displayProblemsInTiles={gameState.config.displayProblemsInTiles}
+                teleporterMode={gameState.teleporterActive}
+                onTileTeleportClick={(tileIndex) => {
+                  engine.selectTeleportTile(tileIndex);
+                }}
+              >
                 {gameState.players.map((player) => {
                   const pos = playerPositions.get(player.id) || { left: 0, top: 0 };
                   return (
@@ -382,12 +508,53 @@ export default function MathQuest() {
               </Board>
             </div>
 
-            <Dice
-              value={gameState.diceValue}
-              isRolling={gameState.isRolling}
-              label={diceLabel}
-              onClick={handleRollDice}
-            />
+            {/* Check if current player has teleporter available */}
+            {gameState.players[gameState.currentPlayer] &&
+            !gameState.pendingItemUse &&
+            ItemSystem.hasItem(gameState.players[gameState.currentPlayer], ItemType.Teleport) ? (
+              // Show Teleporter prompt instead of dice
+              <TeleporterPrompt
+                isOpen={true}
+                selectedTile={gameState.selectedTeleportTile}
+                onConfirm={(tileIndex) => {
+                  // Confirm teleportation
+                  engine.confirmTeleport();
+
+                  // Wait for the next state update, then handle tile landing
+                  setTimeout(() => {
+                    const state = engine.getState();
+                    const playerId = state.currentPlayer;
+                    const actualPosition = state.players[playerId]?.position ?? tileIndex;
+
+                    // Handle tile landing
+                    const result = engine.handleTileLanding(actualPosition, playerId);
+                    if (result === TileLandingResult.Next) {
+                      // Wait for message modal to display before advancing
+                      const latestState = engine.getState();
+                      if (latestState.message !== null) {
+                        setTimeout(() => {
+                          engine.nextTurn();
+                        }, 2600);
+                      } else {
+                        engine.nextTurn();
+                      }
+                    }
+                  }, 50);
+                }}
+                onCancel={() => {
+                  // If player cancels, consume the teleporter and advance turn
+                  engine.useItem(ItemType.Teleport);
+                  engine.nextTurn();
+                }}
+              />
+            ) : !gameState.pendingItemUse || gameState.pendingItemUse.context !== 'dice' ? (
+              <Dice
+                value={gameState.diceValue}
+                isRolling={gameState.isRolling}
+                label={diceLabel}
+                onClick={handleRollDice}
+              />
+            ) : null}
 
             {gameState.bannerMessage && (
               <div
@@ -426,6 +593,29 @@ export default function MathQuest() {
           onClose={handleCloseMessage}
           autoClose={gameState.config.autoCloseModal}
         />
+
+        <ShopDrawer
+          isOpen={gameState.shopOpen}
+          player={gameState.players[gameState.currentPlayer] || gameState.players[0]}
+          onPurchase={handlePurchaseItem}
+          onClose={handleCloseShop}
+        />
+
+        {gameState.pendingItemUse && gameState.pendingItemUse.context === 'dice' ? (
+          <DiceChoicePrompt
+            isOpen={true}
+            onChoose={handleDiceChoice}
+          />
+        ) : gameState.pendingItemUse ? (
+          <ItemPrompt
+            isOpen={true}
+            itemEmoji={ITEM_CATALOG[gameState.pendingItemUse.itemType].emoji}
+            itemName={ITEM_CATALOG[gameState.pendingItemUse.itemType].name}
+            promptMessage={`Would you like to use your ${ITEM_CATALOG[gameState.pendingItemUse.itemType].name}?`}
+            onUse={() => handleUseItem(gameState.pendingItemUse!.itemType)}
+            onDecline={handleDeclineItem}
+          />
+        ) : null}
       </div>
     </div>
   );

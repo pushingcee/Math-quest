@@ -1,4 +1,5 @@
 import { GameScreen, TileType, Difficulty, ObstacleType } from '@/game/constants/enums';
+import { PlayerItem } from './items';
 
 export interface Player {
   id: number;
@@ -8,6 +9,8 @@ export interface Player {
   color: string;
   streak?: number;
   avatarIndex: number;
+  coins: number;
+  inventory: PlayerItem[];
 }
 
 export interface MathProblem {

@@ -1,5 +1,7 @@
 import { Player } from '@/types/game';
 import { ObstacleType } from '../constants/enums';
+import { ItemSystem } from './ItemSystem';
+import { ItemType } from '@/types/items';
 
 export interface ObstacleResult {
   scoreChange: number;
@@ -43,6 +45,20 @@ export class ObstacleSystem {
     obstacleType: ObstacleType,
     boardSize: number
   ): { player: Player; message: string } {
+    // Check if player has a Shield item
+    const hasShield = ItemSystem.hasItem(player, ItemType.Shield);
+    console.log(`🛡️ Shield check for ${player.name}: hasShield=${hasShield}, inventory=`, player.inventory);
+
+    if (hasShield) {
+      // Consume the Shield
+      const updatedPlayer = ItemSystem.useItem(player, ItemType.Shield);
+      console.log(`🛡️ Shield used! Remaining uses:`, updatedPlayer.inventory);
+      return {
+        player: updatedPlayer,
+        message: '🛡️ Your Shield protected you from the obstacle!'
+      };
+    }
+
     if (obstacleType === ObstacleType.Slip) {
       const result = this.handleSlip(player.position, boardSize);
       return {

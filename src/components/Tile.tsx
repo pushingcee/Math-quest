@@ -3,9 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { TileData } from '@/types/game';
 import { TileType, ObstacleType } from '@/game/constants/enums';
-import renderMathInElement from 'katex/contrib/auto-render';
+import { MathRenderer } from '@jahnchock/math-to-latex';
 import 'katex/dist/katex.min.css';
-import { convertMathToLatex } from '@/utils/mathToLatex';
 
 interface TileProps {
   tile: TileData;
@@ -16,23 +15,15 @@ export default function Tile({ tile, displayProblem = true }: TileProps) {
   const { index, difficulty, points, type, label, question } = tile;
   const mathRef = useRef<HTMLDivElement>(null);
 
-  // Render math with KaTeX
+  // Render math with MathRenderer
   useEffect(() => {
     if (mathRef.current && question && displayProblem) {
-      const latexExpression = convertMathToLatex(question);
-      const displayText = `$${latexExpression}$`;
-      mathRef.current.textContent = displayText;
-
       try {
-        renderMathInElement(mathRef.current, {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false },
-          ],
-          throwOnError: false,
-        });
+        const renderedHtml = MathRenderer.render(question);
+        mathRef.current.innerHTML = renderedHtml;
       } catch (error) {
         console.error('KaTeX rendering error:', error);
+        mathRef.current.textContent = question;
       }
     }
   }, [question, displayProblem]);
@@ -82,6 +73,20 @@ export default function Tile({ tile, displayProblem = true }: TileProps) {
         className="flex flex-col items-center justify-center rounded-sm bg-gradient-to-br from-pink-400 to-rose-500 p-4 text-center text-xs font-bold text-white transition-all opacity-30 hover:z-30 hover:scale-105 hover:shadow-lg sm:text-sm"
         dangerouslySetInnerHTML={{ __html: label || '' }}
       />
+    );
+  }
+
+  // Handle shop tiles
+  if (type === TileType.Shop) {
+    return (
+      <div
+        data-index={index}
+        style={position}
+        className="flex flex-col items-center justify-center border border-slate-600 bg-gradient-to-br from-yellow-200 to-yellow-400 p-2 text-center transition-all hover:z-10 hover:scale-105 hover:shadow-lg"
+      >
+        <div className="text-2xl">🏪</div>
+        <div className="text-xs font-bold text-purple-700">SHOP</div>
+      </div>
     );
   }
 

@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
-import renderMathInElement from 'katex/contrib/auto-render';
+import { MathRenderer } from '@jahnchock/math-to-latex';
 import 'katex/dist/katex.min.css';
-import { convertMathToLatex } from '@/utils/mathToLatex';
 
 interface MathModalProps {
   isOpen: boolean;
@@ -38,7 +37,7 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
     }
   }, [isOpen]);
 
-  // Render math with KaTeX auto-render
+  // Render math with MathRenderer
   useEffect(() => {
     if (mathRef.current && problem) {
       // Check if problem starts with "tz" or "тз" (case insensitive)
@@ -51,25 +50,14 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
         mathRef.current.style.whiteSpace = 'normal';
         mathRef.current.style.wordWrap = 'break-word';
       } else {
-        // Convert plain math to LaTeX and wrap in delimiters
-        const latexExpression = convertMathToLatex(problem);
-        const displayText = `$${latexExpression}$`;
-
-        // Set the text content first
-        mathRef.current.textContent = displayText;
-
         try {
-          // Auto-render will find $...$ and $$...$$ delimiters and render them
-          renderMathInElement(mathRef.current, {
-            delimiters: [
-              {left: '$$', right: '$$', display: true},
-              {left: '$', right: '$', display: false},
-            ],
-            throwOnError: false,
-          });
+          // Use MathRenderer to convert and render the math expression
+          const renderedHtml = MathRenderer.render(problem);
+          mathRef.current.innerHTML = renderedHtml;
         } catch (error) {
           console.error('KaTeX rendering error:', error);
-          // Text content is already set, so it will just show as plain text
+          // Fallback to plain text
+          mathRef.current.textContent = problem;
         }
       }
     }

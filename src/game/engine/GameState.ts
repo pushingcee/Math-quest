@@ -1,6 +1,7 @@
 import { Player, MathProblem, TileData, GameScreen } from '@/types/game';
 import { ImportedProblemsData, ImportedProblem } from '@/types/imported-problems';
 import { MessageType } from '@/game/constants/enums';
+import { ItemType } from '@/types/items';
 
 export interface GameConfig {
   negativePointsEnabled: boolean;
@@ -45,6 +46,7 @@ export interface GameState {
   // Dice
   diceValue: number;
   isRolling: boolean;
+  lastRollWasLuckyDice: boolean;
 
   // Math Problem
   mathProblem: MathProblem | null;
@@ -65,6 +67,18 @@ export interface GameState {
   // Messages
   message: GameMessage | null;
   bannerMessage: BannerMessage | null;
+
+  // Shop system
+  shopOpen: boolean;
+  pendingItemUse: {
+    playerId: number;
+    itemType: ItemType;
+    context: 'obstacle' | 'dice' | 'math' | 'teleport';
+  } | null;
+
+  // Teleporter
+  teleporterActive: boolean;
+  selectedTeleportTile: number | null;
 }
 
 export const createInitialState = (): GameState => ({
@@ -80,6 +94,7 @@ export const createInitialState = (): GameState => ({
   tiles: [],
   diceValue: 0,
   isRolling: false,
+  lastRollWasLuckyDice: false,
   mathProblem: null,
   timeLeft: 0,
   isPaused: false,
@@ -98,4 +113,8 @@ export const createInitialState = (): GameState => ({
   },
   message: null,
   bannerMessage: null,
+  shopOpen: false,
+  pendingItemUse: null,
+  teleporterActive: false,
+  selectedTeleportTile: null,
 });

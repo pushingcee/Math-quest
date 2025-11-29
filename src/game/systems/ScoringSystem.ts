@@ -4,6 +4,7 @@ import { SpecialTilePosition, TileScoring } from '../constants/enums';
 export interface AnswerResult {
   correct: boolean;
   scoreChange: number;
+  coinReward: number;
   newStreak: number;
   message: string;
 }
@@ -25,6 +26,7 @@ export class ScoringSystem {
       return {
         correct: true,
         scoreChange: points,
+        coinReward: 15,
         newStreak: currentStreak + 1,
         message: `+${points} points!`
       };
@@ -32,6 +34,7 @@ export class ScoringSystem {
       return {
         correct: false,
         scoreChange: negativePointsEnabled ? -points : 0,
+        coinReward: 0,
         newStreak: 0,
         message: negativePointsEnabled
           ? `The answer was ${correctAnswer}. -${points} points!`
@@ -51,6 +54,7 @@ export class ScoringSystem {
     return {
       correct: false,
       scoreChange: negativePointsEnabled ? -points : 0,
+      coinReward: 0,
       newStreak: 0,
       message: negativePointsEnabled
         ? `⏰ You ran out of time! The correct answer was ${correctAnswer}. -${points} points!`
@@ -81,9 +85,10 @@ export class ScoringSystem {
   /**
    * Calculate bonus for passing START
    */
-  static calculatePassStartBonus(): { scoreChange: number; message: string } {
+  static calculatePassStartBonus(): { scoreChange: number; coinReward: number; message: string } {
     return {
       scoreChange: TileScoring.PassStart.points,
+      coinReward: 30,
       message: TileScoring.PassStart.message
     };
   }

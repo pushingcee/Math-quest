@@ -19,9 +19,16 @@ export class BoardSystem {
     // Define static obstacle positions
     const slipPositions = [7, 28];  // Ice tiles (slip)
     const trapPositions = [18, 38]; // Trap tiles
+    const shopPositions = [19, 20, 29, 30]; // Shop tiles
 
     for (let i = 0; i < boardSize; i++) {
-      if (i === SpecialTilePosition.Start) {
+      if (shopPositions.includes(i)) {
+        newTiles.push({
+          index: i,
+          type: TileType.Shop,
+          label: '🏪 SHOP'
+        });
+      } else if (i === SpecialTilePosition.Start) {
         newTiles.push({
           index: i,
           type: TileType.Corner,
