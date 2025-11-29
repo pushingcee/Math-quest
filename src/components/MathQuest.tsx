@@ -110,7 +110,7 @@ export default function MathQuest() {
     const offsetY = otherPlayersOnTile * 20;
 
     const relativeLeft = tileRect.left - boardRect.left + tileRect.width / 2 - 32 + offsetX;
-    const relativeTop = tileRect.top - boardRect.top + tileRect.height / 2 - 32 - offsetY;
+    const relativeTop = tileRect.top - boardRect.top + tileRect.height / 2 - 32 - offsetY - 15;
 
     return { left: relativeLeft, top: relativeTop };
   }, []);
