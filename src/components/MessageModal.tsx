@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useEffect } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
 
 interface MessageModalProps {
   isOpen: boolean;
@@ -53,6 +55,8 @@ const correctAnswerEmojis = [
 ];
 
 export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true }: MessageModalProps) {
+  const { language } = useLanguage();
+
   // Pick a random emoji when modal opens
   const randomEmoji = useMemo(() => {
     const emojiList = type === 'success' ? correctAnswerEmojis : wrongAnswerEmojis;
@@ -97,7 +101,7 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
         <div className={`text-2xl font-bold ${
           type === 'success' ? 'text-green-600' : 'text-red-600'
         }`}>
-          {type === 'success' ? 'Correct!' : message.includes('ran out of time') ? 'Time\'s Up!' : 'Wrong!'}
+          {type === 'success' ? t(language, 'correctAnswer') : message.includes('ran out of time') ? t(language, 'timesUp') : t(language, 'wrongAnswer')}
         </div>
         <div className="my-5 text-xl text-black">
           {message}
@@ -110,7 +114,7 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
               : 'bg-gradient-to-br from-red-500 to-red-700 hover:shadow-red-500/40'
           }`}
         >
-          Continue
+          {t(language, 'continue')}
         </button>
       </div>
     </div>

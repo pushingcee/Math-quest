@@ -2,12 +2,16 @@
 
 import { useState } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
+import LanguageSelector from './LanguageSelector';
 
 interface GameSetupProps {
   onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number, autoCloseModal?: boolean, displayProblemsInTiles?: boolean) => void;
 }
 
 export default function GameSetup({ onStart }: GameSetupProps) {
+  const { language } = useLanguage();
   const [playerCount, setPlayerCount] = useState(1);
   const [importedProblems, setImportedProblems] = useState<ImportedProblemsData | null>(null);
   const [fileName, setFileName] = useState<string>('');
@@ -63,18 +67,19 @@ export default function GameSetup({ onStart }: GameSetupProps) {
 
   return (
     <div className="text-center">
-      <h2 className="mb-5 text-2xl font-semibold text-black">Game Setup</h2>
+      <LanguageSelector />
+      <h2 className="mb-5 text-2xl font-semibold text-black">{t(language, 'gameSetup')}</h2>
       <label className="mb-2.5 block text-xl text-black">
-        Number of Players:
+        {t(language, 'numberOfPlayers')}
         <select
           value={playerCount}
           onChange={(e) => setPlayerCount(parseInt(e.target.value))}
           className="ml-2.5 rounded-lg border-2 border-purple-500 bg-white px-3 py-1.5 text-lg text-black transition-all hover:border-purple-600 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
         >
-          <option value={1}>1 Player</option>
-          <option value={2}>2 Players</option>
-          <option value={3}>3 Players</option>
-          <option value={4}>4 Players</option>
+          <option value={1}>{t(language, 'player1')}</option>
+          <option value={2}>{t(language, 'player2')}</option>
+          <option value={3}>{t(language, 'player3')}</option>
+          <option value={4}>{t(language, 'player4')}</option>
         </select>
       </label>
 
@@ -86,7 +91,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
             onChange={(e) => setNegativePoints(e.target.checked)}
             className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
           />
-          <span className="font-medium">Enable Negative Points</span>
+          <span className="font-medium">{t(language, 'enableNegativePoints')}</span>
         </label>
       </div>
 
@@ -98,7 +103,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
             onChange={(e) => setTimerEnabled(e.target.checked)}
             className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
           />
-          <span className="font-medium">Enable Timer</span>
+          <span className="font-medium">{t(language, 'enableTimer')}</span>
         </label>
         <input
           type="text"
@@ -129,7 +134,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
               : 'cursor-not-allowed border-gray-300 bg-gray-100 text-gray-400'
           }`}
         />
-        <span className="text-lg text-black">seconds</span>
+        <span className="text-lg text-black">{t(language, 'seconds')}</span>
       </div>
 
       <div className="mt-6 flex items-center justify-center gap-3">
@@ -140,7 +145,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
             onChange={(e) => setAutoCloseModal(e.target.checked)}
             className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
           />
-          <span className="font-medium">Enable Modal Auto-Close</span>
+          <span className="font-medium">{t(language, 'enableModalAutoClose')}</span>
         </label>
       </div>
 
@@ -152,16 +157,16 @@ export default function GameSetup({ onStart }: GameSetupProps) {
             onChange={(e) => setDisplayProblemsInTiles(e.target.checked)}
             className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
           />
-          <span className="font-medium">Display Problems in Tiles</span>
+          <span className="font-medium">{t(language, 'displayProblemsInTiles')}</span>
         </label>
       </div>
 
       <div className="mt-6 rounded-lg border-2 border-dashed border-purple-300 bg-purple-50 p-4">
         <label className="block text-lg font-semibold text-black mb-2">
-          📁 Import Math Problems (Optional)
+          {t(language, 'importMathProblems')}
         </label>
         <p className="text-sm text-gray-600 mb-3">
-          Upload a JSON file with custom math problems
+          {t(language, 'uploadJsonFile')}
         </p>
         <input
           type="file"
@@ -171,12 +176,12 @@ export default function GameSetup({ onStart }: GameSetupProps) {
         />
         {fileName && (
           <div className="mt-2 text-sm text-green-600 font-medium">
-            ✓ Loaded: {fileName} ({importedProblems?.problemCount} problems)
+            {t(language, 'loaded')} {fileName} ({importedProblems?.problemCount} {t(language, 'problems')})
           </div>
         )}
         {error && (
           <div className="mt-2 text-sm text-red-600 font-medium">
-            ✗ {error}
+            {t(language, 'invalidJsonFile')}
           </div>
         )}
       </div>
@@ -185,7 +190,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
         onClick={handleStart}
         className="mt-5 w-full rounded-full bg-gradient-to-br from-purple-500 to-purple-700 px-8 py-3 text-lg font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-500/40"
       >
-        Start Game
+        {t(language, 'startGame')}
       </button>
     </div>
   );

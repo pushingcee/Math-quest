@@ -1,6 +1,8 @@
 'use client';
 
 import { Player } from '@/types/game';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
 
 interface PlayerCardProps {
   player: Player;
@@ -8,6 +10,7 @@ interface PlayerCardProps {
 }
 
 export default function PlayerCard({ player, isActive }: PlayerCardProps) {
+  const { language } = useLanguage();
   return (
     <div
       className={`min-w-[150px] max-w-[250px] flex-1 rounded-xl border-3 p-5 text-center transition-all duration-300 ${
@@ -25,7 +28,7 @@ export default function PlayerCard({ player, isActive }: PlayerCardProps) {
       <div className="my-2.5 text-xl font-bold text-black">{player.name}</div>
       <div className="text-sm">
         <div className="my-1 text-2xl font-bold text-purple-600">
-          {player.score} pts
+          {player.score} {t(language, 'points')}
         </div>
         <div className="text-sm font-medium text-black">Tile {player.position + 1}</div>
       </div>

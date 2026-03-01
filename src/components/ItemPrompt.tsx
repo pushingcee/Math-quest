@@ -1,5 +1,8 @@
 'use client';
 
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
+
 interface ItemPromptProps {
   isOpen: boolean;
   itemEmoji: string;
@@ -17,6 +20,8 @@ export default function ItemPrompt({
   onUse,
   onDecline,
 }: ItemPromptProps) {
+  const { language } = useLanguage();
+
   if (!isOpen) return null;
 
   return (
@@ -27,7 +32,7 @@ export default function ItemPrompt({
 
         {/* Prompt Message */}
         <h2 className="mb-3 text-2xl font-bold text-purple-700">
-          Use {itemName}?
+          {t(language, 'useItemPrompt', { name: itemName })}
         </h2>
         <p className="mb-6 text-lg text-gray-700">{promptMessage}</p>
 
@@ -37,13 +42,13 @@ export default function ItemPrompt({
             onClick={onDecline}
             className="flex-1 rounded-full bg-gradient-to-br from-gray-500 to-gray-600 px-6 py-3 text-lg font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
           >
-            No Thanks
+            {t(language, 'noThanks')}
           </button>
           <button
             onClick={onUse}
             className="flex-1 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 px-6 py-3 text-lg font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-500/40 active:scale-95"
           >
-            Use It!
+            {t(language, 'useIt')}
           </button>
         </div>
       </div>

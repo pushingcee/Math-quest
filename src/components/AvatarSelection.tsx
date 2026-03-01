@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { playerSprites } from './PlayerSprites';
 import { colorizePlayerSprite } from '@/game/utils/svgColorizer';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
 
 interface AvatarSelectionProps {
   playerNumber: number;
@@ -12,14 +14,14 @@ interface AvatarSelectionProps {
 }
 
 const AVAILABLE_COLORS = [
-  { name: 'Red', hex: '#e74c3c' },
-  { name: 'Blue', hex: '#3498db' },
-  { name: 'Green', hex: '#2ecc71' },
-  { name: 'Orange', hex: '#f39c12' },
-  { name: 'Purple', hex: '#9b59b6' },
-  { name: 'Pink', hex: '#e91e63' },
-  { name: 'Teal', hex: '#1abc9c' },
-  { name: 'Yellow', hex: '#f1c40f' },
+  { nameKey: 'red', hex: '#e74c3c' },
+  { nameKey: 'blue', hex: '#3498db' },
+  { nameKey: 'green', hex: '#2ecc71' },
+  { nameKey: 'orange', hex: '#f39c12' },
+  { nameKey: 'purple', hex: '#9b59b6' },
+  { nameKey: 'pink', hex: '#e91e63' },
+  { nameKey: 'teal', hex: '#1abc9c' },
+  { nameKey: 'yellow', hex: '#f1c40f' },
 ];
 
 export default function AvatarSelection({
@@ -28,7 +30,8 @@ export default function AvatarSelection({
   selectedColors,
   onSelectAvatar,
 }: AvatarSelectionProps) {
-  const avatarNames = ['Knight', 'Wizard', 'Archer', 'Rogue', 'Jester'];
+  const { language } = useLanguage();
+  const avatarNameKeys = ['knight', 'wizard', 'archer', 'rogue', 'jester'];
   const [selectedAvatarIndex, setSelectedAvatarIndex] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
@@ -80,12 +83,12 @@ export default function AvatarSelection({
   return (
     <div className="text-center">
       <h2 className="mb-6 text-3xl font-bold text-purple-700">
-        Player {playerNumber} - Choose Your Character
+        {t(language, 'playerChooseCharacter', { number: playerNumber })}
       </h2>
 
       {/* Avatar Selection */}
       <div className="mb-8">
-        <h3 className="mb-4 text-xl font-semibold text-gray-700">1. Select Your Class</h3>
+        <h3 className="mb-4 text-xl font-semibold text-gray-700">{t(language, 'selectYourClass')}</h3>
         <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
           {playerSprites.map((sprite, index) => {
             const isSelected = selectedAvatars.includes(index);
@@ -113,12 +116,12 @@ export default function AvatarSelection({
                   dangerouslySetInnerHTML={{ __html: getSpriteForDisplay(index) }}
                 />
                 <span className="text-lg font-semibold text-gray-700">
-                  {avatarNames[index]}
+                  {t(language, avatarNameKeys[index])}
                 </span>
                 {!isAvailable && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20">
                     <span className="rounded bg-red-500 px-3 py-1 text-sm font-bold text-white">
-                      Taken
+                      {t(language, 'taken')}
                     </span>
                   </div>
                 )}
@@ -130,7 +133,7 @@ export default function AvatarSelection({
 
       {/* Color Selection */}
       <div className="mb-8">
-        <h3 className="mb-4 text-xl font-semibold text-gray-700">2. Select Your Color</h3>
+        <h3 className="mb-4 text-xl font-semibold text-gray-700">{t(language, 'selectYourColor')}</h3>
         <div className="flex flex-wrap justify-center gap-4">
           {AVAILABLE_COLORS.map((color) => {
             const isTaken = selectedColors.includes(color.hex);
@@ -154,11 +157,11 @@ export default function AvatarSelection({
                 style={{ backgroundColor: color.hex }}
               >
                 <span className="text-xs font-bold text-white drop-shadow-md">
-                  {color.name}
+                  {t(language, color.nameKey)}
                 </span>
                 {isTaken && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30">
-                    <span className="text-xs font-bold text-white">Taken</span>
+                    <span className="text-xs font-bold text-white">{t(language, 'taken')}</span>
                   </div>
                 )}
               </button>
@@ -181,7 +184,7 @@ export default function AvatarSelection({
             }
           `}
         >
-          Confirm Selection
+          {t(language, 'confirmSelection')}
         </button>
       </div>
     </div>

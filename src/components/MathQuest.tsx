@@ -9,6 +9,8 @@ import { GameState } from '@/game/engine/GameState';
 import { ItemType, ITEM_CATALOG } from '@/types/items';
 import { ItemSystem } from '@/game/systems/ItemSystem';
 import { DevTools } from '@/game/debug/devtools';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
 import GameSetup from './GameSetup';
 import AvatarSelection from './AvatarSelection';
 import Board from './Board';
@@ -24,6 +26,9 @@ import DiceChoicePrompt from './DiceChoicePrompt';
 import TeleporterPrompt from './TeleporterPrompt';
 
 export default function MathQuest() {
+  // Language support
+  const { language } = useLanguage();
+
   // Create game engine instance (persists across renders)
   const engine = useMemo(() => new GameEngine(), []);
 
@@ -32,7 +37,7 @@ export default function MathQuest() {
 
   // UI-specific state (not part of game logic)
   const [playerPositions, setPlayerPositions] = useState<Map<number, { left: number; top: number }>>(new Map());
-  const [diceLabel, setDiceLabel] = useState('Click to Roll!');
+  const [diceLabel, setDiceLabel] = useState(t(language, 'clickToRoll'));
   const [suppressDiceSound, setSuppressDiceSound] = useState(false);
 
   // Refs for audio and DOM
@@ -55,13 +60,13 @@ export default function MathQuest() {
       const player = gameState.players[gameState.currentPlayer];
       if (player) {
         if (gameState.diceValue === 0) {
-          setDiceLabel(`${player.name}'s turn - Click to Roll!`);
+          setDiceLabel(t(language, 'turnClickToRoll', { name: player.name }));
         } else {
-          setDiceLabel(`${player.name} rolled ${gameState.diceValue}!`);
+          setDiceLabel(t(language, 'rolled', { name: player.name, value: gameState.diceValue }));
         }
       }
     }
-  }, [gameState.currentPlayer, gameState.diceValue, gameState.players, gameState.screen]);
+  }, [gameState.currentPlayer, gameState.diceValue, gameState.players, gameState.screen, language]);
 
   // Timer management
   useEffect(() => {
@@ -84,7 +89,7 @@ export default function MathQuest() {
               clearInterval(timerIntervalRef.current);
               timerIntervalRef.current = null;
             }
-            engine.submitAnswerTimeout();
+            engine.submitAnswerTimeout(language);
           }
         }
       }, 1000);
@@ -332,7 +337,7 @@ export default function MathQuest() {
   }, [engine, handleMovePlayer, gameState.lastRollWasLuckyDice, suppressDiceSound]);
 
   const handleSubmitAnswer = useCallback((userAnswer: number) => {
-    const correct = engine.submitAnswer(userAnswer);
+    const correct = engine.submitAnswer(userAnswer, language);
 
     // Play audio feedback
     if (correct) {
@@ -352,7 +357,7 @@ export default function MathQuest() {
         audio.play().catch(e => console.log('Audio play failed:', e));
       }
     }
-  }, [engine]);
+  }, [engine, language]);
 
   const handleCloseMessage = useCallback(() => {
     engine.closeMessage();

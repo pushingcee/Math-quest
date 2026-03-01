@@ -1,6 +1,8 @@
 'use client';
 
 import { Player } from '@/types/game';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
 
 interface GameOverProps {
   players: Player[];
@@ -8,6 +10,7 @@ interface GameOverProps {
 }
 
 export default function GameOver({ players, onPlayAgain }: GameOverProps) {
+  const { language } = useLanguage();
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
   const winner = sortedPlayers[0];
   const isSinglePlayer = players.length === 1;
@@ -17,22 +20,22 @@ export default function GameOver({ players, onPlayAgain }: GameOverProps) {
       <div className="mb-5 animate-pulse text-4xl font-bold">
         {isSinglePlayer ? (
           <>
-            🎯 Game Complete! 🎯
+            🎯 {t(language, 'gameOver')}! 🎯
             <br />
-            Final Score: {winner.score} points
+            {t(language, 'finalScores')}: {winner.score}
           </>
         ) : (
           <>
-            🏆 {winner.name} Wins! 🏆
+            🏆 {winner.name} {t(language, 'gameOver')}! 🏆
             <br />
-            Final Score: {winner.score} points
+            {t(language, 'finalScores')}: {winner.score}
           </>
         )}
       </div>
       <div className="my-5 rounded-lg bg-white/20 p-5 backdrop-blur-sm">
         {sortedPlayers.map((player, index) => (
           <div key={player.id} className="my-2.5 text-xl">
-            {index + 1}. {player.name}: {player.score} points
+            {index + 1}. {player.name}: {player.score}
           </div>
         ))}
       </div>
@@ -40,7 +43,7 @@ export default function GameOver({ players, onPlayAgain }: GameOverProps) {
         onClick={onPlayAgain}
         className="w-full rounded-full bg-white px-8 py-3 text-lg font-bold text-rose-500 transition-all hover:-translate-y-0.5 hover:shadow-lg"
       >
-        Play Again
+        {t(language, 'playAgain')}
       </button>
     </div>
   );

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Player } from '@/types/game';
 import { ItemType, ITEM_CATALOG } from '@/types/items';
 import { ItemSystem } from '@/game/systems/ItemSystem';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
 
 interface ShopDrawerProps {
   isOpen: boolean;
@@ -13,6 +15,7 @@ interface ShopDrawerProps {
 }
 
 export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: ShopDrawerProps) {
+  const { language } = useLanguage();
   const [selectedItem, setSelectedItem] = useState<ItemType | null>(null);
 
   if (!isOpen) return null;
@@ -32,16 +35,16 @@ export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: Shop
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-purple-700">🏪 Item Shop</h2>
+            <h2 className="text-3xl font-bold text-purple-700">{t(language, 'itemShop')}</h2>
             <p className="text-lg text-purple-600">
-              Your Coins: <span className="font-bold text-yellow-600">💰 {player.coins}</span>
+              {t(language, 'yourCoins')} <span className="font-bold text-yellow-600">💰 {player.coins}</span>
             </p>
           </div>
           <button
             onClick={onClose}
             className="rounded-full bg-gradient-to-br from-red-500 to-red-600 px-6 py-2 text-lg font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-lg"
           >
-            ✕ Close
+            ✕ {t(language, 'close')}
           </button>
         </div>
 
@@ -52,6 +55,16 @@ export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: Shop
             const canAfford = ItemSystem.canAffordItem(player, itemType);
             const alreadyOwned = player.inventory.find(i => i.itemType === itemType);
             const cannotBuy = (alreadyOwned && !itemDef.stackable);
+
+            // Get translated item name and description
+            const itemNameKey = itemType === ItemType.Shield ? 'shield'
+              : itemType === ItemType.ExtraDiceRoll ? 'luckyDice'
+              : itemType === ItemType.PointMultiplier ? 'pointBooster'
+              : 'teleporter';
+            const itemDescKey = itemType === ItemType.Shield ? 'shieldDescription'
+              : itemType === ItemType.ExtraDiceRoll ? 'luckyDiceDescription'
+              : itemType === ItemType.PointMultiplier ? 'pointBoosterDescription'
+              : 'teleporterDescription';
 
             return (
               <div
@@ -68,20 +81,20 @@ export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: Shop
 
                 {/* Item Name */}
                 <h3 className="mb-2 text-center text-xl font-bold text-purple-700">
-                  {itemDef.name}
+                  {t(language, itemNameKey)}
                 </h3>
 
                 {/* Item Description */}
                 <p className="mb-3 text-center text-sm text-gray-700">
-                  {itemDef.description}
+                  {t(language, itemDescKey)}
                 </p>
 
                 {/* Uses */}
                 <div className="mb-3 text-center text-xs font-semibold text-purple-600">
-                  {itemDef.maxUses === 1 ? 'Single Use' : `${itemDef.maxUses} Uses`}
+                  {itemDef.maxUses === 1 ? t(language, 'singleUse') : t(language, 'uses', { count: itemDef.maxUses })}
                   {alreadyOwned && (
                     <span className="ml-2 text-green-600">
-                      (Owned: {alreadyOwned.usesRemaining})
+                      ({t(language, 'owned', { count: alreadyOwned.usesRemaining })})
                     </span>
                   )}
                 </div>
@@ -105,7 +118,7 @@ export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: Shop
                         : 'bg-gradient-to-br from-purple-500 to-purple-700 hover:-translate-y-0.5 hover:shadow-lg'
                     }`}
                   >
-                    {cannotBuy ? 'Owned' : !canAfford ? 'Too Expensive' : 'Buy'}
+                    {cannotBuy ? t(language, 'ownedButton') : !canAfford ? t(language, 'tooExpensive') : t(language, 'buy')}
                   </button>
                 </div>
               </div>
@@ -116,17 +129,23 @@ export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: Shop
         {/* Your Inventory */}
         {player.inventory.length > 0 && (
           <div className="mt-6 rounded-xl border-2 border-purple-300 bg-purple-50 p-4">
-            <h3 className="mb-3 text-xl font-bold text-purple-700">Your Inventory</h3>
+            <h3 className="mb-3 text-xl font-bold text-purple-700">{t(language, 'yourInventory')}</h3>
             <div className="flex flex-wrap gap-3">
               {player.inventory.map((item, idx) => {
                 const itemDef = ITEM_CATALOG[item.itemType];
+                // Get translated item name
+                const itemNameKey = item.itemType === ItemType.Shield ? 'shield'
+                  : item.itemType === ItemType.ExtraDiceRoll ? 'luckyDice'
+                  : item.itemType === ItemType.PointMultiplier ? 'pointBooster'
+                  : 'teleporter';
+
                 return (
                   <div
                     key={idx}
                     className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm"
                   >
                     <span className="text-2xl">{itemDef.emoji}</span>
-                    <span className="font-semibold text-purple-700">{itemDef.name}</span>
+                    <span className="font-semibold text-purple-700">{t(language, itemNameKey)}</span>
                     <span className="text-sm text-purple-600">×{item.usesRemaining}</span>
                   </div>
                 );

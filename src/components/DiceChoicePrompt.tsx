@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
 
 interface DiceChoicePromptProps {
   isOpen: boolean;
@@ -8,6 +10,7 @@ interface DiceChoicePromptProps {
 }
 
 export default function DiceChoicePrompt({ isOpen, onChoose }: DiceChoicePromptProps) {
+  const { language } = useLanguage();
   const [roll1, setRoll1] = useState(0);
   const [roll2, setRoll2] = useState(0);
   const [rolling, setRolling] = useState(false);
@@ -76,8 +79,8 @@ export default function DiceChoicePrompt({ isOpen, onChoose }: DiceChoicePromptP
   return (
     <div className="fixed left-1/2 top-1/2 z-[110] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-8 text-center shadow-xl">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-black mb-2">🎲 Lucky Dice!</h2>
-        <p className="text-sm text-slate-600">Choose the better roll</p>
+        <h2 className="text-lg font-semibold text-black mb-2">🎲 {t(language, 'luckyDice')}!</h2>
+        <p className="text-sm text-slate-600">{t(language, 'rollTwiceAndChoose')}</p>
       </div>
 
       <div className="flex justify-center gap-8 mx-auto my-2.5">
@@ -100,7 +103,7 @@ export default function DiceChoicePrompt({ isOpen, onChoose }: DiceChoicePromptP
               onClick={() => handleChoice(roll1)}
               className="mt-3 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
             >
-              Choose
+              {t(language, 'choose')}
             </button>
           )}
         </div>
@@ -124,14 +127,14 @@ export default function DiceChoicePrompt({ isOpen, onChoose }: DiceChoicePromptP
               onClick={() => handleChoice(roll2)}
               className="mt-3 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
             >
-              Choose
+              {t(language, 'choose')}
             </button>
           )}
         </div>
       </div>
 
       {rolling && (
-        <p className="text-center text-slate-600 text-sm mt-4">Rolling...</p>
+        <p className="text-center text-slate-600 text-sm mt-4">{t(language, 'rolling')}...</p>
       )}
     </div>
   );

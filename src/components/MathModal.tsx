@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { MathRenderer } from '@jahnchock/math-to-latex';
 import 'katex/dist/katex.min.css';
+import { useLanguage } from '@/context/LanguageContext';
+import { t } from '@/i18n/translations';
 
 interface MathModalProps {
   isOpen: boolean;
@@ -16,6 +18,7 @@ interface MathModalProps {
 }
 
 export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit, timerEnabled = true, isPaused = false, onTogglePause }: MathModalProps) {
+  const { language } = useLanguage();
   const [answer, setAnswer] = useState('');
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false);
   const mathRef = useRef<HTMLDivElement>(null);
@@ -106,10 +109,10 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-[500px] animate-slide-in rounded-2xl bg-white p-6 text-center">
-        <h2 className="mb-4 text-2xl font-bold text-black">Solve the Math Problem!</h2>
+        <h2 className="mb-4 text-2xl font-bold text-black">{t(language, 'solveMathProblem')}</h2>
         {points !== undefined && (
           <div className="mb-3 inline-block rounded-lg bg-gradient-to-r from-purple-500 to-purple-700 px-6 py-2 text-xl font-bold text-white shadow-lg">
-            {points} Points
+            {t(language, 'points_label', { points })}
           </div>
         )}
         <div className="my-4 flex items-center justify-center gap-2 text-2xl font-bold text-black">
@@ -122,14 +125,14 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
         {timerEnabled && (
           <div className="my-2 flex items-center justify-center gap-3">
             <div className="text-xl text-red-500">
-              Time: <span id="timer">{timeLeft}</span>s
+              {t(language, 'time')} <span id="timer">{timeLeft}</span>s
             </div>
             {onTogglePause && (
               <button
                 onClick={onTogglePause}
                 className="rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 px-4 py-1.5 text-sm font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
               >
-                {isPaused ? '▶ Resume' : '⏸ Pause'}
+                {isPaused ? t(language, 'resume') : t(language, 'pause')}
               </button>
             )}
           </div>
@@ -161,7 +164,7 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
               e.preventDefault();
             }
           }}
-          placeholder="Your answer"
+          placeholder={t(language, 'yourAnswer')}
           autoFocus={!useCustomKeyboard}
           readOnly={useCustomKeyboard}
           className="my-4 w-full max-w-[300px] rounded-lg border-2 border-purple-500 bg-purple-50 p-3 text-center text-3xl font-bold text-black focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
@@ -195,7 +198,7 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
             onClick={handleSubmit}
             className="w-full rounded-full bg-gradient-to-br from-purple-500 to-purple-700 px-8 py-3 text-lg font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-500/40"
           >
-            Submit Answer
+            {t(language, 'submitAnswer')}
           </button>
         )}
       </div>

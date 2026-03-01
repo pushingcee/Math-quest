@@ -1,5 +1,6 @@
 import { Player } from '@/types/game';
 import { SpecialTilePosition, TileScoring } from '../constants/enums';
+import { Language, t } from '@/i18n/translations';
 
 export interface AnswerResult {
   correct: boolean;
@@ -18,7 +19,8 @@ export class ScoringSystem {
     correctAnswer: number,
     points: number,
     currentStreak: number,
-    negativePointsEnabled: boolean
+    negativePointsEnabled: boolean,
+    language: Language = 'en'
   ): AnswerResult {
     const correct = userAnswer === correctAnswer;
 
@@ -28,7 +30,7 @@ export class ScoringSystem {
         scoreChange: points,
         coinReward: 15,
         newStreak: currentStreak + 1,
-        message: `+${points} points!`
+        message: t(language, 'pointsGained', { points })
       };
     } else {
       return {
@@ -37,8 +39,8 @@ export class ScoringSystem {
         coinReward: 0,
         newStreak: 0,
         message: negativePointsEnabled
-          ? `The answer was ${correctAnswer}. -${points} points!`
-          : `The answer was ${correctAnswer}.`
+          ? t(language, 'answerWasWithPenalty', { answer: correctAnswer, points })
+          : t(language, 'answerWas', { answer: correctAnswer })
       };
     }
   }
@@ -49,7 +51,8 @@ export class ScoringSystem {
   static calculateTimeoutResult(
     correctAnswer: number,
     points: number,
-    negativePointsEnabled: boolean
+    negativePointsEnabled: boolean,
+    language: Language = 'en'
   ): AnswerResult {
     return {
       correct: false,
@@ -57,8 +60,8 @@ export class ScoringSystem {
       coinReward: 0,
       newStreak: 0,
       message: negativePointsEnabled
-        ? `⏰ You ran out of time! The correct answer was ${correctAnswer}. -${points} points!`
-        : `⏰ You ran out of time! The correct answer was ${correctAnswer}.`
+        ? t(language, 'ranOutOfTimeWithPenalty', { answer: correctAnswer, points })
+        : t(language, 'ranOutOfTime', { answer: correctAnswer })
     };
   }
 

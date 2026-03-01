@@ -10,6 +10,7 @@ import { TurnSystem } from '../systems/TurnSystem';
 import { ObstacleSystem } from '../systems/ObstacleSystem';
 import { ItemSystem } from '../systems/ItemSystem';
 import { ItemType } from '@/types/items';
+import { Language } from '@/i18n/translations';
 
 export type StateChangeListener = (state: GameState) => void;
 
@@ -455,7 +456,7 @@ export class GameEngine {
   /**
    * Submit an answer
    */
-  submitAnswer(userAnswer: number): boolean {
+  submitAnswer(userAnswer: number, language: Language = 'en'): boolean {
     if (!this.state.mathProblem) return false;
 
     const player = this.state.players[this.state.currentPlayer];
@@ -466,7 +467,8 @@ export class GameEngine {
       this.state.mathProblem.answer,
       this.state.mathProblem.points,
       player.streak || 0,
-      this.state.config.negativePointsEnabled
+      this.state.config.negativePointsEnabled,
+      language
     );
 
     // Update player
@@ -493,7 +495,7 @@ export class GameEngine {
   /**
    * Handle timeout
    */
-  submitAnswerTimeout() {
+  submitAnswerTimeout(language: Language = 'en') {
     if (!this.state.mathProblem) return;
 
     const player = this.state.players[this.state.currentPlayer];
@@ -502,7 +504,8 @@ export class GameEngine {
     const result = ScoringSystem.calculateTimeoutResult(
       this.state.mathProblem.answer,
       this.state.mathProblem.points,
-      this.state.config.negativePointsEnabled
+      this.state.config.negativePointsEnabled,
+      language
     );
 
     let updatedPlayer = ScoringSystem.applyScoreChange(player, result.scoreChange);
