@@ -595,6 +595,7 @@ export default function MathQuest() {
           message={gameState.message?.text || ''}
           type={gameState.message?.type || 'success'}
           streak={gameState.message?.streak}
+          problem={gameState.message?.problem}
           onClose={handleCloseMessage}
           autoClose={gameState.config.autoCloseModal}
         />

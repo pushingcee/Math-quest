@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
+import { MathRenderer } from '@jahnchock/math-to-latex';
+import 'katex/dist/katex.min.css';
 import { useLanguage } from '@/context/LanguageContext';
 import { t } from '@/i18n/translations';
 
@@ -11,6 +13,7 @@ interface MessageModalProps {
   onClose: () => void;
   streak?: number;
   autoClose?: boolean;
+  problem?: string;
 }
 
 const wrongAnswerEmojis = [
@@ -54,8 +57,9 @@ const correctAnswerEmojis = [
   '✨', // Sparkles
 ];
 
-export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true }: MessageModalProps) {
+export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true, problem }: MessageModalProps) {
   const { language } = useLanguage();
+  const mathRef = useRef<HTMLDivElement>(null);
 
   // Pick a random emoji when modal opens
   const randomEmoji = useMemo(() => {
@@ -77,6 +81,32 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
     }
   }, [isOpen, type, streak]);
 
+  // Render math problem with KaTeX
+  useEffect(() => {
+    if (mathRef.current && problem) {
+      // Check if problem starts with "tz" or "тз" (case insensitive)
+      const isPlainText = /^(tz|тз)/i.test(problem.trim());
+
+      if (isPlainText) {
+        // Display as plain text without KaTeX formatting, removing the "tz" or "тз" prefix
+        const textWithoutPrefix = problem.replace(/^(tz|тз)\s*/i, '');
+        mathRef.current.textContent = textWithoutPrefix;
+        mathRef.current.style.whiteSpace = 'normal';
+        mathRef.current.style.wordWrap = 'break-word';
+      } else {
+        try {
+          // Use MathRenderer to convert and render the math expression
+          const renderedHtml = MathRenderer.render(problem);
+          mathRef.current.innerHTML = renderedHtml;
+        } catch (error) {
+          console.error('KaTeX rendering error:', error);
+          // Fallback to plain text
+          mathRef.current.textContent = problem;
+        }
+      }
+    }
+  }, [problem]);
+
   // Auto-close after 2.5 seconds (if enabled)
   useEffect(() => {
     if (isOpen && autoClose) {
@@ -87,8 +117,6 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
       return () => clearTimeout(timer);
     }
   }, [isOpen, onClose, autoClose]);
-
-  console.log('MessageModal render:', { isOpen, message, type, streak });
 
   if (!isOpen) return null;
 
@@ -103,6 +131,15 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
         }`}>
           {type === 'success' ? t(language, 'correctAnswer') : message.includes('ran out of time') ? t(language, 'timesUp') : t(language, 'wrongAnswer')}
         </div>
+        {problem && (
+          <div className="my-4 flex items-center justify-center gap-2 text-xl font-semibold text-gray-700">
+            <div
+              ref={mathRef}
+              className="max-w-[350px] px-2 py-2 whitespace-normal break-words"
+            ></div>
+            <span className="shrink-0">= ?</span>
+          </div>
+        )}
         <div className="my-5 text-xl text-black">
           {message}
         </div>
