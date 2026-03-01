@@ -22,7 +22,7 @@ const AVAILABLE_COLORS = [
   { nameKey: 'pink', hex: '#e91e63' },
   { nameKey: 'teal', hex: '#1abc9c' },
   { nameKey: 'yellow', hex: '#f1c40f' },
-];
+] as const;
 
 export default function AvatarSelection({
   playerNumber,
@@ -31,7 +31,7 @@ export default function AvatarSelection({
   onSelectAvatar,
 }: AvatarSelectionProps) {
   const { language } = useLanguage();
-  const avatarNameKeys = ['knight', 'wizard', 'archer', 'rogue', 'jester'];
+  const avatarNameKeys = ['knight', 'wizard', 'archer', 'rogue', 'jester'] as const;
   const [selectedAvatarIndex, setSelectedAvatarIndex] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
