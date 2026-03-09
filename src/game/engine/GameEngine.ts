@@ -17,6 +17,7 @@ export type StateChangeListener = (state: GameState) => void;
 export class GameEngine {
   private state: GameState;
   private listeners: Set<StateChangeListener> = new Set();
+  private forcedDiceValue: number | null = null;
 
   constructor(initialState?: Partial<GameState>) {
     this.state = { ...createInitialState(), ...initialState };
@@ -208,9 +209,23 @@ export class GameEngine {
       return 0;
     }
 
-    const value = Math.floor(Math.random() * 6) + 1;
+    let value: number;
+    if (this.forcedDiceValue !== null) {
+      value = this.forcedDiceValue;
+      this.forcedDiceValue = null;
+    } else {
+      value = Math.floor(Math.random() * 6) + 1;
+    }
+
     this.setState({ isRolling: true });
     return value;
+  }
+
+  /**
+   * Force the next dice roll to return a specific value (debug only)
+   */
+  setForcedDiceValue(value: number) {
+    this.forcedDiceValue = value;
   }
 
   /**
