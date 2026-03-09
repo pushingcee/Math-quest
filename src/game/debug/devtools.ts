@@ -203,6 +203,20 @@ export class DevTools {
   }
 
   /**
+   * Force the next dice roll to produce a specific number of steps.
+   * Respects the full roll event loop: animation, completeDiceRoll, movement.
+   * @param value Positive integer
+   */
+  setNextDiceRoll(value: number) {
+    if (!Number.isInteger(value) || value < 1) {
+      console.error('Value must be a positive integer');
+      return;
+    }
+    this.engine.setForcedDiceValue(value);
+    console.log(`🎯 Next dice roll locked to ${value} — click the dice to trigger`);
+  }
+
+  /**
    * Advance to next turn
    */
   nextTurn() {
@@ -239,6 +253,7 @@ export class DevTools {
 
 Movement:
   __gameDebug.movePlayerTo(tileIndex)  - Move to tile 0-39
+  __gameDebug.setNextDiceRoll(n)       - Lock next roll to n steps (click dice to trigger)
 
 Problem Solving:
   __gameDebug.answerCorrectly()        - Auto-answer current problem correctly

@@ -370,13 +370,18 @@ export default function MathQuest() {
       // Close shop
       engine.closeShop();
 
-      // Teleporter will auto-activate on next turn via useEffect
-      // ExtraDiceRoll is consumed immediately
       if (itemType === ItemType.ExtraDiceRoll) {
+        // Consume one use immediately, then advance turn
         engine.useItem(itemType);
-      } else if (itemType !== ItemType.Teleport) {
-        // Other items get a confirmation prompt
-        engine.promptItemUse(itemType, 'math');
+        engine.nextTurn();
+      } else if (itemType === ItemType.Teleport) {
+        // Teleporter auto-activates via useEffect when diceValue === 0
+        // Don't advance turn here — TeleporterPrompt handles the flow
+      } else {
+        // Shield and PointBooster are passive inventory items:
+        // Shield auto-activates on obstacle tiles, PointBooster on math problems.
+        // No "use now" prompt needed — just advance the turn.
+        engine.nextTurn();
       }
     }
   }, [engine]);
