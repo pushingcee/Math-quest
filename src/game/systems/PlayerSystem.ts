@@ -54,12 +54,11 @@ export class PlayerSystem {
    * Players skip over these tiles and land on the next available regular tile
    */
   static movePlayerToPosition(player: Player, newPosition: number, boardSize: number): Player {
-    // Corner tiles are at positions 0, 10, 20, 30 - these should be skipped
-    const cornerTiles = [0, 10, 20, 30];
+    // Corner tiles (0, 10, 20, 30) are decorative overlays — skip them.
+    const skipTiles = [0, 10, 20, 30];
     let finalPosition = newPosition % boardSize;
 
-    // If landing on a corner tile, skip to the next non-corner tile
-    while (cornerTiles.includes(finalPosition)) {
+    while (skipTiles.includes(finalPosition)) {
       finalPosition = (finalPosition + 1) % boardSize;
     }
 

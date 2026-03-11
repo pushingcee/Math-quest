@@ -10,7 +10,7 @@ export class BoardSystem {
    * @param problems Optional imported problems to use
    * @returns Array of TileData
    */
-  static createBoard(boardSize: number = 40, problems?: ImportedProblemsData): TileData[] {
+  static createBoard(boardSize: number = 39, problems?: ImportedProblemsData): TileData[] {
     const newTiles: TileData[] = [];
 
     // Create a pool of imported problems if available
@@ -20,7 +20,6 @@ export class BoardSystem {
     const slipPositions = [7, 28];  // Ice tiles (slip)
     const trapPositions = [18, 38]; // Trap tiles
     const shopPositions = [19, 20, 29, 30]; // Shop tiles
-
     for (let i = 0; i < boardSize; i++) {
       if (shopPositions.includes(i)) {
         newTiles.push({

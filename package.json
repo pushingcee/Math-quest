@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@jahnchock/math-to-latex": "^1.0.0",
+    "@pixi/react": "^8.0.5",
     "katex": "^0.16.25",
     "next": "16.0.0",
+    "pixi.js": "^8.17.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },

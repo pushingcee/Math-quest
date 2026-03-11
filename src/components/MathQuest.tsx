@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Player, GameScreen } from '@/types/game';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { TileLandingResult } from '@/game/constants/enums';
@@ -13,9 +14,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { t } from '@/i18n/translations';
 import GameSetup from './GameSetup';
 import AvatarSelection from './AvatarSelection';
-import Board from './Board';
 import PlayerCard from './PlayerCard';
-import PlayerToken from './PlayerToken';
 import Dice from './Dice';
 import MathModal from './MathModal';
 import MessageModal from './MessageModal';
@@ -24,6 +23,9 @@ import ShopDrawer from './ShopDrawer';
 import ItemPrompt from './ItemPrompt';
 import DiceChoicePrompt from './DiceChoicePrompt';
 import TeleporterPrompt from './TeleporterPrompt';
+
+// PixiJS is client-only — dynamic import to avoid SSR crashes
+const PixiBoard = dynamic(() => import('./pixi/PixiBoard'), { ssr: false });
 
 export default function MathQuest() {
   // Language support
@@ -36,7 +38,6 @@ export default function MathQuest() {
   const [gameState, setGameState] = useState<GameState>(engine.getState());
 
   // UI-specific state (not part of game logic)
-  const [playerPositions, setPlayerPositions] = useState<Map<number, { left: number; top: number }>>(new Map());
   const [diceLabel, setDiceLabel] = useState(t(language, 'clickToRoll'));
   const [suppressDiceSound, setSuppressDiceSound] = useState(false);
 
@@ -102,49 +103,6 @@ export default function MathQuest() {
       };
     }
   }, [gameState.mathProblem, gameState.config.timerEnabled, engine]);
-
-  // Calculate token position (DOM-specific logic)
-  const calculateTokenPosition = useCallback((position: number, playerId: number, allPlayers: Player[]) => {
-    const tile = document.querySelector(`[data-index="${position}"]`);
-    const board = document.getElementById('board');
-
-    if (!tile || !board) {
-      return { left: 0, top: 0 };
-    }
-
-    const tileRect = tile.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-
-    const otherPlayersOnTile = allPlayers.filter(
-      (p) => p.id < playerId && p.position === position
-    ).length;
-
-    const offsetX = otherPlayersOnTile * 20 - 10;
-    const offsetY = otherPlayersOnTile * 20;
-
-    const relativeLeft = tileRect.left - boardRect.left + tileRect.width / 2 - 32 + offsetX;
-    const relativeTop = tileRect.top - boardRect.top + tileRect.height / 2 - 32 - offsetY - 15;
-
-    return { left: relativeLeft, top: relativeTop };
-  }, []);
-
-  // Update player positions when players change
-  const updatePlayerPositions = useCallback(() => {
-    const newPositions = new Map();
-    gameState.players.forEach((player) => {
-      const pos = calculateTokenPosition(player.position, player.id, gameState.players);
-      newPositions.set(player.id, pos);
-    });
-    setPlayerPositions(newPositions);
-  }, [gameState.players, calculateTokenPosition]);
-
-  // Update positions when screen or tiles change
-  useEffect(() => {
-    if (gameState.screen === GameScreen.Playing && gameState.tiles.length > 0 && gameState.players.length > 0) {
-      const timer = setTimeout(updatePlayerPositions, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [gameState.screen, gameState.tiles, updatePlayerPositions, gameState.players]);
 
   // Auto-dismiss banner message
   useEffect(() => {
@@ -242,28 +200,18 @@ export default function MathQuest() {
     engine.startMovingPlayer(playerId);
     engine.setRolling(false);
 
-    // Animate movement step by step
+    // Animate movement step by step — PixiBoard reacts to position changes
     for (let step = 1; step <= steps; step++) {
       await new Promise((resolve) => setTimeout(resolve, 400));
 
       const currentState = engine.getState();
       const currentPosition = currentState.players[playerId]?.position ?? oldPosition;
-      // Move one step forward from current position, accounting for any skips
       const newPosition = (currentPosition + 1) % currentState.config.boardSize;
-      const passedStart = engine.movePlayerStep(playerId, newPosition);
-
-      // Update visual position
-      setTimeout(() => {
-        const freshState = engine.getState();
-        const actualPlayerPosition = freshState.players[playerId]?.position ?? newPosition;
-        const pos = calculateTokenPosition(actualPlayerPosition, playerId, freshState.players);
-        setPlayerPositions((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(playerId, pos);
-          return newMap;
-        });
-      }, 0);
+      engine.movePlayerStep(playerId, newPosition);
     }
+
+    // Wait for the last step's walk animation to finish before clearing isMoving
+    await new Promise((resolve) => setTimeout(resolve, 350));
 
     engine.completePlayerMovement();
 
@@ -276,17 +224,14 @@ export default function MathQuest() {
       engine.applyPassStartBonus(playerId);
     }
 
-    // Handle tile landing using the actual position (which skips corner tiles)
+    // Handle tile landing — corner tiles + tile 39 (under START) are skipped
     setTimeout(() => {
-      // Verify position is not a corner tile before handling landing
       const cornerTiles = [0, 10, 20, 30];
       if (!cornerTiles.includes(actualPosition)) {
         const result = engine.handleTileLanding(actualPosition, playerId);
         if (result === TileLandingResult.Next) {
-          // Wait for message modal to display before advancing (if obstacle tile)
           const state = engine.getState();
           if (state.message !== null) {
-            // Wait for user to close modal or auto-close (2.5s) before next turn
             setTimeout(() => {
               engine.nextTurn();
             }, 2600);
@@ -295,11 +240,10 @@ export default function MathQuest() {
           }
         }
       } else {
-        // Corner tile - just advance to next turn
         engine.nextTurn();
       }
     }, 500);
-  }, [engine, calculateTokenPosition]);
+  }, [engine]);
 
   const handleRollDice = useCallback(() => {
     console.log('🎲 handleRollDice called', { suppressDiceSound, lastRollWasLuckyDice: gameState.lastRollWasLuckyDice });
@@ -457,10 +401,10 @@ export default function MathQuest() {
   // ===== RENDER =====
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-500 to-purple-800 p-5">
-      <div className="w-full max-w-6xl rounded-2xl bg-white/95 p-8 shadow-2xl">
-        <div className="mb-8 text-center">
-          <h1 className="mb-2.5 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-5xl font-bold text-transparent">
+    <div className="flex h-screen overflow-y-auto items-start justify-center bg-gradient-to-br from-purple-500 to-purple-800 p-2 sm:items-center sm:p-5">
+      <div className="w-full max-w-6xl rounded-2xl bg-white/95 p-4 shadow-2xl sm:p-8">
+        <div className="mb-4 text-center sm:mb-8">
+          <h1 className="mb-1 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-3xl font-bold text-transparent sm:mb-2.5 sm:text-5xl">
             Math Quest
           </h1>
           {gameState.screen === GameScreen.Playing && (
@@ -483,7 +427,7 @@ export default function MathQuest() {
 
         {gameState.screen === GameScreen.Playing && (
           <>
-            <div className="mb-8 flex flex-wrap justify-center gap-4">
+            <div className="mb-4 flex flex-wrap justify-center gap-2 sm:mb-8 sm:gap-4">
               {gameState.players.map((player, index) => (
                 <PlayerCard
                   key={player.id}
@@ -493,30 +437,17 @@ export default function MathQuest() {
               ))}
             </div>
 
-            <div className="mx-auto max-w-[750px]">
-              <Board
-                tiles={gameState.tiles}
-                displayProblemsInTiles={gameState.config.displayProblemsInTiles}
-                teleporterMode={gameState.teleporterActive}
-                onTileTeleportClick={(tileIndex) => {
-                  engine.selectTeleportTile(tileIndex);
-                }}
-              >
-                {gameState.players.map((player) => {
-                  const pos = playerPositions.get(player.id) || { left: 0, top: 0 };
-                  return (
-                    <PlayerToken
-                      key={player.id}
-                      player={player}
-                      left={pos.left}
-                      top={pos.top}
-                      isMoving={gameState.movingPlayer === player.id}
-                      isActive={player.id === gameState.currentPlayer && gameState.mathProblem === null}
-                    />
-                  );
-                })}
-              </Board>
-            </div>
+            <PixiBoard
+              tiles={gameState.tiles}
+              players={gameState.players}
+              currentPlayer={gameState.currentPlayer}
+              movingPlayer={gameState.movingPlayer}
+              teleporterMode={gameState.teleporterActive}
+              selectedTeleportTile={gameState.selectedTeleportTile}
+              onTileTeleportClick={(tileIndex) => {
+                engine.selectTeleportTile(tileIndex);
+              }}
+            />
 
             {/* Check if current player has teleporter available */}
             {gameState.players[gameState.currentPlayer] &&

@@ -430,7 +430,21 @@ export class GameEngine {
 
     // Regular tile with math problem
     if (tile.difficulty && tile.points && tile.question !== undefined && tile.answer !== undefined) {
-      this.showMathProblem(tile.difficulty, tile.points, tile.question, tile.answer);
+      // Tiles under the BONUS corner (tile 10, cols 1-2, rows 10-11) get x2 points
+      const bonusTiles = [8, 9, 11];
+      const pointsMultiplier = bonusTiles.includes(position) ? 2 : 1;
+      const finalPoints = tile.points * pointsMultiplier;
+
+      if (pointsMultiplier > 1) {
+        this.setState({
+          bannerMessage: {
+            text: TileScoring[SpecialTilePosition.Bonus].message,
+            type: MessageType.Success
+          }
+        });
+      }
+
+      this.showMathProblem(tile.difficulty, finalPoints, tile.question, tile.answer);
       return TileLandingResult.Math;
     }
 
