@@ -6,7 +6,6 @@ import { Container, Graphics as PixiGraphics, Text as PixiText, Sprite as PixiSp
 import { TileData } from '@/types/game';
 import { TileType, ObstacleType } from '@/game/constants/enums';
 import { TileLayout } from '@/game/board/BoardLayout';
-import { DropShadowFilter } from 'pixi-filters';
 import { assetPath } from '@/utils/assetPath';
 
 extend({ Container, Graphics: PixiGraphics, Text: PixiText, Sprite: PixiSprite });
@@ -64,16 +63,6 @@ export default memo(function PixiTile({
   const isRegular = type !== TileType.Corner && type !== TileType.Shop && type !== TileType.Obstacle;
   const isShop = type === TileType.Shop;
 
-  // Blurred drop shadow filter — shared across re-renders
-  const tileFilters = useMemo(() => [
-    new DropShadowFilter({
-      offset: { x: 4, y: 4 },
-      color: 0x000000,
-      alpha: 0.7,
-      blur: 4,
-      quality: 4,
-    }),
-  ], []);
 
   const [bronzeTexture, setBronzeTexture] = useState<Texture | null>(null);
   useEffect(() => {
@@ -184,7 +173,6 @@ export default memo(function PixiTile({
       hitArea={hitArea}
       zIndex={isCorner ? 10 : 1}
       onPointerDown={handlePointerDown}
-      filters={tileFilters}
     >
       <pixiGraphics draw={drawTileBackground} />
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { Application, extend, useApplication } from '@pixi/react';
-import { Container, Graphics as PixiGraphics, Sprite as PixiSprite, Texture, Assets } from 'pixi.js';
+import { Container, Graphics as PixiGraphics, Sprite as PixiSprite, Text as PixiText, Texture, Assets } from 'pixi.js';
 import { TileData, Player } from '@/types/game';
 import { computeBoardLayout, computeStackOffset, TILE_GAP } from '@/game/board/BoardLayout';
 import { useCamera } from './useCamera';
@@ -10,7 +10,7 @@ import PixiTile from './PixiTile';
 import PixiPlayerToken from './PixiPlayerToken';
 import { assetPath } from '@/utils/assetPath';
 
-extend({ Container, Graphics: PixiGraphics, Sprite: PixiSprite });
+extend({ Container, Graphics: PixiGraphics, Sprite: PixiSprite, Text: PixiText });
 
 let bgTexturePromise: Promise<Texture> | null = null;
 function loadBgTexture(): Promise<Texture> {
@@ -34,6 +34,41 @@ const BOARD_BG = 0x334155; // slate-700
 const TILE_GAP_COLOR = 0x6b7280; // gray-500 — visible in the gaps between tiles
 const BOARD_PADDING = 8;
 const BOARD_WORLD_SIZE = 863; // fixed world size — 750 * 1.15 (scaled up 15%)
+
+function FpsCounter({ x, y }: { x: number; y: number }) {
+  const { app } = useApplication();
+  const textRef = useRef<PixiText>(null);
+
+  useEffect(() => {
+    const ticker = app?.ticker;
+    if (!ticker) return;
+    let frames = 0;
+    let elapsed = 0;
+    const tick = () => {
+      frames++;
+      elapsed += ticker.deltaMS;
+      if (elapsed >= 500) {
+        const fps = Math.round((frames / elapsed) * 1000);
+        if (textRef.current) textRef.current.text = `${fps} FPS`;
+        frames = 0;
+        elapsed = 0;
+      }
+    };
+    ticker.add(tick);
+    return () => { ticker.remove(tick); };
+  }, [app?.ticker]);
+
+  return (
+    <pixiText
+      ref={textRef}
+      text="-- FPS"
+      x={x}
+      y={y}
+      anchor={{ x: 1, y: 1 }}
+      style={{ fontFamily: 'monospace', fontSize: 14, fill: 0x00ff00, fontWeight: 'bold' }}
+    />
+  );
+}
 
 /** Inner component that has access to the PixiJS application context */
 function PixiBoardContent({
@@ -70,6 +105,18 @@ function PixiBoardContent({
     };
   }, [activePlayer?.position, layout]);
 
+  // Drop shadows — single Graphics layer, zero GPU filter cost
+  const drawTileShadows = useCallback(
+    (g: PixiGraphics) => {
+      g.clear();
+      for (const tl of layout.tiles) {
+        g.roundRect(tl.x + 3, tl.y + 3, tl.width, tl.height, 2)
+          .fill({ color: 0x000000, alpha: 0.55 });
+      }
+    },
+    [layout]
+  );
+
   // Draw gray background behind each tile's full cell area so the gaps are visibly gray
   const drawGapBackground = useCallback(
     (g: PixiGraphics) => {
@@ -92,7 +139,7 @@ function PixiBoardContent({
     ticker: app?.ticker ?? null,
   });
 
-  return (
+  return (<>
     <pixiContainer ref={worldRef}>
 
       {/* Inner board background image */}
@@ -109,6 +156,11 @@ function PixiBoardContent({
       {/* Gray gap background behind tiles */}
       <pixiContainer x={BOARD_PADDING} y={BOARD_PADDING}>
         <pixiGraphics draw={drawGapBackground} />
+      </pixiContainer>
+
+      {/* Drop shadows — between gap background and tiles */}
+      <pixiContainer x={BOARD_PADDING} y={BOARD_PADDING}>
+        <pixiGraphics draw={drawTileShadows} />
       </pixiContainer>
 
       {/* Tiles layer */}
@@ -148,6 +200,10 @@ function PixiBoardContent({
         })}
       </pixiContainer>
     </pixiContainer>
+
+    {/* FPS counter — fixed to bottom-right of viewport */}
+    <FpsCounter x={viewportWidth - 8} y={viewportHeight - 8} />
+  </>
   );
 }
 
