@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, memo } from 'react';
 import { extend } from '@pixi/react';
 import { Container, Graphics as PixiGraphics, Text as PixiText, Sprite as PixiSprite, Rectangle, Texture, Assets } from 'pixi.js';
 import { TileData } from '@/types/game';
@@ -51,7 +51,7 @@ const COLORS = {
   white: 0xffffff,
 };
 
-export default function PixiTile({
+export default memo(function PixiTile({
   tile,
   layout,
   teleporterMode = false,
@@ -238,4 +238,4 @@ export default function PixiTile({
       )}
     </pixiContainer>
   );
-}
+});

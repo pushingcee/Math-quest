@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, memo } from 'react';
 import { extend, useApplication } from '@pixi/react';
 import {
   Container,
@@ -29,7 +29,7 @@ interface PixiPlayerTokenProps {
 
 const TOKEN_SIZE = 64;
 
-export default function PixiPlayerToken({
+export default memo(function PixiPlayerToken({
   player,
   tileLayout,
   stackOffset,
@@ -192,4 +192,4 @@ export default function PixiPlayerToken({
       </pixiContainer>
     </pixiContainer>
   );
-}
+});
