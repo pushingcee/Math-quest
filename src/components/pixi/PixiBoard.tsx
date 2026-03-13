@@ -8,13 +8,14 @@ import { computeBoardLayout, computeStackOffset, TILE_GAP } from '@/game/board/B
 import { useCamera } from './useCamera';
 import PixiTile from './PixiTile';
 import PixiPlayerToken from './PixiPlayerToken';
+import { assetPath } from '@/utils/assetPath';
 
 extend({ Container, Graphics: PixiGraphics, Sprite: PixiSprite });
 
 let bgTexturePromise: Promise<Texture> | null = null;
 function loadBgTexture(): Promise<Texture> {
   if (!bgTexturePromise) {
-    bgTexturePromise = Assets.load('/generic-bg.jpg');
+    bgTexturePromise = Assets.load(assetPath('/generic-bg.jpg'));
   }
   return bgTexturePromise;
 }

@@ -8,6 +8,7 @@ import { TileLandingResult } from '@/game/constants/enums';
 import { GameEngine } from '@/game/engine/GameEngine';
 import { GameState } from '@/game/engine/GameState';
 import { ItemType, ITEM_CATALOG } from '@/types/items';
+import { assetPath } from '@/utils/assetPath';
 import { ItemSystem } from '@/game/systems/ItemSystem';
 import { DevTools } from '@/game/debug/devtools';
 import { useLanguage } from '@/context/LanguageContext';
@@ -403,7 +404,7 @@ export default function MathQuest() {
   return (
     <div
       className={`flex h-screen overflow-y-auto items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5 ${gameState.screen !== GameScreen.Playing ? 'bg-gradient-to-br from-purple-500 to-purple-800' : ''}`}
-      style={{ backgroundImage: gameState.screen === GameScreen.Playing ? "url('/table-wizzard.jpg')" : undefined }}
+      style={{ backgroundImage: gameState.screen === GameScreen.Playing ? `url('${assetPath('/table-wizzard.jpg')}')` : undefined }}
     >
       <div className={`w-full max-w-6xl rounded-2xl p-4 sm:p-8 ${gameState.screen !== GameScreen.Playing ? 'bg-white/95 shadow-2xl' : ''}`}>
         <div className="mb-4 text-center sm:mb-8">

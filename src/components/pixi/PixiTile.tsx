@@ -7,6 +7,7 @@ import { TileData } from '@/types/game';
 import { TileType, ObstacleType } from '@/game/constants/enums';
 import { TileLayout } from '@/game/board/BoardLayout';
 import { DropShadowFilter } from 'pixi-filters';
+import { assetPath } from '@/utils/assetPath';
 
 extend({ Container, Graphics: PixiGraphics, Text: PixiText, Sprite: PixiSprite });
 
@@ -14,7 +15,7 @@ extend({ Container, Graphics: PixiGraphics, Text: PixiText, Sprite: PixiSprite }
 let bronzeTexturePromise: Promise<Texture> | null = null;
 function loadBronzeTexture(): Promise<Texture> {
   if (!bronzeTexturePromise) {
-    bronzeTexturePromise = Assets.load('/bronze-tile.jpg');
+    bronzeTexturePromise = Assets.load(assetPath('/bronze-tile.jpg'));
   }
   return bronzeTexturePromise;
 }
@@ -22,7 +23,7 @@ function loadBronzeTexture(): Promise<Texture> {
 let shopTexturePromise: Promise<Texture> | null = null;
 function loadShopTexture(): Promise<Texture> {
   if (!shopTexturePromise) {
-    shopTexturePromise = Assets.load('/shop-3.jpg');
+    shopTexturePromise = Assets.load(assetPath('/shop-3.jpg'));
   }
   return shopTexturePromise;
 }
