@@ -45,18 +45,24 @@ export interface BoardLayoutResult {
  *
  *   Tiles 31-38 (right col): col 11, row = index - 30 + 1
  */
+/** Gap in pixels between adjacent tiles (visible on all sides) */
+export const TILE_GAP = 5;
+
 export function computeBoardLayout(boardPixelSize: number): BoardLayoutResult {
   const cellSize = boardPixelSize / 11;
   const tiles: TileLayout[] = [];
+  const halfGap = TILE_GAP / 2;
 
   for (let index = 0; index < 39; index++) {
     const pos = getTileGridPosition(index);
     const isCorner = [0, 10, 20, 30].includes(index);
-    const w = isCorner ? cellSize * 2 : cellSize;
-    const h = isCorner ? cellSize * 2 : cellSize;
-    // Convert 1-based grid position to 0-based pixel position
-    const x = (pos.col - 1) * cellSize;
-    const y = (pos.row - 1) * cellSize;
+    const spanCells = isCorner ? 2 : 1;
+    // Inset by half the gap on each side so adjacent tiles have a full TILE_GAP between them
+    const w = cellSize * spanCells - TILE_GAP;
+    const h = cellSize * spanCells - TILE_GAP;
+    // Convert 1-based grid position to 0-based pixel position, then inset
+    const x = (pos.col - 1) * cellSize + halfGap;
+    const y = (pos.row - 1) * cellSize + halfGap;
 
     tiles.push({
       index,

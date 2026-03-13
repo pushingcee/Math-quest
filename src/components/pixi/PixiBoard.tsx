@@ -2,14 +2,22 @@
 
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { Application, extend, useApplication } from '@pixi/react';
-import { Container, Graphics as PixiGraphics } from 'pixi.js';
+import { Container, Graphics as PixiGraphics, Sprite as PixiSprite, Texture, Assets } from 'pixi.js';
 import { TileData, Player } from '@/types/game';
-import { computeBoardLayout, computeStackOffset } from '@/game/board/BoardLayout';
+import { computeBoardLayout, computeStackOffset, TILE_GAP } from '@/game/board/BoardLayout';
 import { useCamera } from './useCamera';
 import PixiTile from './PixiTile';
 import PixiPlayerToken from './PixiPlayerToken';
 
-extend({ Container, Graphics: PixiGraphics });
+extend({ Container, Graphics: PixiGraphics, Sprite: PixiSprite });
+
+let bgTexturePromise: Promise<Texture> | null = null;
+function loadBgTexture(): Promise<Texture> {
+  if (!bgTexturePromise) {
+    bgTexturePromise = Assets.load('/generic-bg.jpg');
+  }
+  return bgTexturePromise;
+}
 
 interface PixiBoardProps {
   tiles: TileData[];
@@ -22,8 +30,9 @@ interface PixiBoardProps {
 }
 
 const BOARD_BG = 0x334155; // slate-700
+const TILE_GAP_COLOR = 0x6b7280; // gray-500 — visible in the gaps between tiles
 const BOARD_PADDING = 8;
-const BOARD_WORLD_SIZE = 750; // fixed world size — board is always rendered at this size
+const BOARD_WORLD_SIZE = 863; // fixed world size — 750 * 1.15 (scaled up 15%)
 
 /** Inner component that has access to the PixiJS application context */
 function PixiBoardContent({
@@ -39,6 +48,10 @@ function PixiBoardContent({
 }: PixiBoardProps & { viewportWidth: number; viewportHeight: number }) {
   const { app } = useApplication();
   const worldRef = useRef<Container>(null);
+
+  // Load inner board background texture
+  const [bgTexture, setBgTexture] = useState<Texture | null>(null);
+  useEffect(() => { loadBgTexture().then(setBgTexture); }, []);
 
   // Layout is always computed at the fixed world size
   const innerSize = BOARD_WORLD_SIZE - BOARD_PADDING * 2;
@@ -56,6 +69,20 @@ function PixiBoardContent({
     };
   }, [activePlayer?.position, layout]);
 
+  // Draw gray background behind each tile's full cell area so the gaps are visibly gray
+  const drawGapBackground = useCallback(
+    (g: PixiGraphics) => {
+      g.clear();
+      const halfGap = TILE_GAP / 2;
+      for (const tl of layout.tiles) {
+        // Expand tile rect back to the full cell size (undo the gap inset)
+        g.rect(tl.x - halfGap, tl.y - halfGap, tl.width + TILE_GAP, tl.height + TILE_GAP)
+          .fill({ color: TILE_GAP_COLOR });
+      }
+    },
+    [layout]
+  );
+
   // Camera: smoothly pans/zooms the world container
   useCamera(worldRef, cameraTarget, {
     viewportWidth,
@@ -64,18 +91,24 @@ function PixiBoardContent({
     ticker: app?.ticker ?? null,
   });
 
-  const drawBackground = useCallback(
-    (g: PixiGraphics) => {
-      g.clear();
-      g.roundRect(0, 0, BOARD_WORLD_SIZE, BOARD_WORLD_SIZE, 12).fill(BOARD_BG);
-    },
-    []
-  );
-
   return (
     <pixiContainer ref={worldRef}>
-      {/* Board background */}
-      <pixiGraphics draw={drawBackground} />
+
+      {/* Inner board background image */}
+      {bgTexture && (
+        <pixiSprite
+          texture={bgTexture}
+          x={BOARD_PADDING + layout.cellSize}
+          y={BOARD_PADDING + layout.cellSize}
+          width={layout.cellSize * 9}
+          height={layout.cellSize * 9}
+        />
+      )}
+
+      {/* Gray gap background behind tiles */}
+      <pixiContainer x={BOARD_PADDING} y={BOARD_PADDING}>
+        <pixiGraphics draw={drawGapBackground} />
+      </pixiContainer>
 
       {/* Tiles layer */}
       <pixiContainer x={BOARD_PADDING} y={BOARD_PADDING} sortableChildren>
@@ -144,7 +177,7 @@ export default function PixiBoard(props: PixiBoardProps) {
     return (
       <div
         ref={containerRef}
-        className="mx-auto aspect-square w-full max-w-[750px]"
+        className="mx-auto aspect-square w-full max-w-[863px]"
         id="board"
       />
     );
@@ -153,14 +186,14 @@ export default function PixiBoard(props: PixiBoardProps) {
   return (
     <div
       ref={containerRef}
-      className="mx-auto w-full max-w-[750px]"
+      className="mx-auto w-full max-w-[863px]"
       id="board"
       style={{ height: viewport.height }}
     >
       <Application
         width={viewport.width}
         height={viewport.height}
-        background={BOARD_BG}
+        backgroundAlpha={0}
         antialias
         autoDensity
         resolution={typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1}

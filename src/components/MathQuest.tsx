@@ -401,8 +401,11 @@ export default function MathQuest() {
   // ===== RENDER =====
 
   return (
-    <div className="flex h-screen overflow-y-auto items-start justify-center bg-gradient-to-br from-purple-500 to-purple-800 p-2 sm:items-center sm:p-5">
-      <div className="w-full max-w-6xl rounded-2xl bg-white/95 p-4 shadow-2xl sm:p-8">
+    <div
+      className={`flex h-screen overflow-y-auto items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5 ${gameState.screen !== GameScreen.Playing ? 'bg-gradient-to-br from-purple-500 to-purple-800' : ''}`}
+      style={{ backgroundImage: gameState.screen === GameScreen.Playing ? "url('/table-wizzard.jpg')" : undefined }}
+    >
+      <div className={`w-full max-w-6xl rounded-2xl p-4 sm:p-8 ${gameState.screen !== GameScreen.Playing ? 'bg-white/95 shadow-2xl' : ''}`}>
         <div className="mb-4 text-center sm:mb-8">
           <h1 className="mb-1 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-3xl font-bold text-transparent sm:mb-2.5 sm:text-5xl">
             Math Quest

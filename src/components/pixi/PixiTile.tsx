@@ -1,13 +1,31 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { extend } from '@pixi/react';
-import { Container, Graphics as PixiGraphics, Text as PixiText, Rectangle } from 'pixi.js';
+import { Container, Graphics as PixiGraphics, Text as PixiText, Sprite as PixiSprite, Rectangle, Texture, Assets } from 'pixi.js';
 import { TileData } from '@/types/game';
 import { TileType, ObstacleType } from '@/game/constants/enums';
 import { TileLayout } from '@/game/board/BoardLayout';
+import { DropShadowFilter } from 'pixi-filters';
 
-extend({ Container, Graphics: PixiGraphics, Text: PixiText });
+extend({ Container, Graphics: PixiGraphics, Text: PixiText, Sprite: PixiSprite });
+
+// Shared textures — loaded once
+let bronzeTexturePromise: Promise<Texture> | null = null;
+function loadBronzeTexture(): Promise<Texture> {
+  if (!bronzeTexturePromise) {
+    bronzeTexturePromise = Assets.load('/bronze-tile.jpg');
+  }
+  return bronzeTexturePromise;
+}
+
+let shopTexturePromise: Promise<Texture> | null = null;
+function loadShopTexture(): Promise<Texture> {
+  if (!shopTexturePromise) {
+    shopTexturePromise = Assets.load('/shop-3.jpg');
+  }
+  return shopTexturePromise;
+}
 
 interface PixiTileProps {
   tile: TileData;
@@ -42,6 +60,33 @@ export default function PixiTile({
   const { index, type, points, question, label } = tile;
   const { x, y, width, height } = layout;
   const isCorner = [0, 10, 20, 30].includes(index);
+  const isRegular = type !== TileType.Corner && type !== TileType.Shop && type !== TileType.Obstacle;
+  const isShop = type === TileType.Shop;
+
+  // Blurred drop shadow filter — shared across re-renders
+  const tileFilters = useMemo(() => [
+    new DropShadowFilter({
+      offset: { x: 4, y: 4 },
+      color: 0x000000,
+      alpha: 0.7,
+      blur: 4,
+      quality: 4,
+    }),
+  ], []);
+
+  const [bronzeTexture, setBronzeTexture] = useState<Texture | null>(null);
+  useEffect(() => {
+    if (isRegular) {
+      loadBronzeTexture().then(setBronzeTexture);
+    }
+  }, [isRegular]);
+
+  const [shopTexture, setShopTexture] = useState<Texture | null>(null);
+  useEffect(() => {
+    if (isShop) {
+      loadShopTexture().then(setShopTexture);
+    }
+  }, [isShop]);
 
   const drawTileBackground = useCallback(
     (g: PixiGraphics) => {
@@ -67,17 +112,32 @@ export default function PixiTile({
           ? COLORS.obstacleSlip
           : COLORS.obstacleTrap;
       } else {
+        // Regular tiles use the bronze texture sprite — skip solid fill
         bgColor = COLORS.regular;
       }
 
-      g.rect(x, y, width, height).fill({ color: bgColor, alpha: bgAlpha });
+      const hasTextureSprite = (isRegular && bronzeTexture) || (isShop && shopTexture);
+      if (!hasTextureSprite) {
+        g.rect(x, y, width, height).fill({ color: bgColor, alpha: bgAlpha });
+      }
 
       // Border (not on corners — they have their own styling)
       if (!isCorner) {
         g.rect(x, y, width, height).stroke({ color: COLORS.border, width: 1 });
       }
     },
-    [x, y, width, height, type, tile.obstacleType, isCorner, teleporterMode, teleporterSelected]
+    [x, y, width, height, type, tile.obstacleType, isCorner, isRegular, bronzeTexture, isShop, shopTexture, teleporterMode, teleporterSelected]
+  );
+
+  const drawTextBackground = useCallback(
+    (g: PixiGraphics) => {
+      g.clear();
+      const padX = width * 0.1;
+      const padY = height * 0.1;
+      g.roundRect(x + padX, y + padY, width - padX * 2, height - padY * 2, 4)
+        .fill({ color: 0x000000, alpha: 0.45 });
+    },
+    [x, y, width, height]
   );
 
   // Determine text content
@@ -92,17 +152,19 @@ export default function PixiTile({
       .replace(/<[^>]*>/g, '');
     mainFontSize = Math.max(8, width * 0.12);
   } else if (type === TileType.Shop) {
-    mainText = '🏪';
-    mainFontSize = Math.max(12, width * 0.35);
-    secondaryText = 'SHOP';
+    // Shop tiles use image textures — only show text as fallback
+    if (!shopTexture) {
+      mainText = '🏪';
+      mainFontSize = Math.max(12, width * 0.35);
+      secondaryText = 'SHOP';
+    }
   } else if (type === TileType.Obstacle) {
     mainText = tile.obstacleType === ObstacleType.Slip ? '🧊' : '⚠️';
     mainFontSize = Math.max(12, width * 0.35);
   } else {
-    // Regular tile
-    mainText = question ? '?' : '?';
-    mainFontSize = Math.max(8, width * 0.22);
-    secondaryText = points ? `${points}pts` : '';
+    // Regular tile — show points number (or ? if no points)
+    mainText = points ? `${points}` : '?';
+    mainFontSize = Math.max(8, width * 0.22 * 1.05);
   }
 
   const handlePointerDown = useCallback(() => {
@@ -121,8 +183,24 @@ export default function PixiTile({
       hitArea={hitArea}
       zIndex={isCorner ? 10 : 1}
       onPointerDown={handlePointerDown}
+      filters={tileFilters}
     >
       <pixiGraphics draw={drawTileBackground} />
+
+      {/* Bronze texture for regular tiles */}
+      {isRegular && bronzeTexture && (
+        <pixiSprite texture={bronzeTexture} x={x} y={y} width={width} height={height} />
+      )}
+
+      {/* Shop texture */}
+      {isShop && shopTexture && (
+        <pixiSprite texture={shopTexture} x={x} y={y} width={width} height={height} />
+      )}
+
+      {/* Semi-transparent background behind text on question tiles */}
+      {isRegular && bronzeTexture && (
+        <pixiGraphics draw={drawTextBackground} />
+      )}
 
       {/* Main text */}
       <pixiText
@@ -133,7 +211,7 @@ export default function PixiTile({
         style={{
           fontFamily: 'Arial',
           fontSize: mainFontSize,
-          fill: type === TileType.Corner ? COLORS.white : COLORS.tileText,
+          fill: (type === TileType.Corner || isRegular) ? COLORS.white : COLORS.tileText,
           align: 'center',
           fontWeight: type === TileType.Corner ? 'bold' : 'normal',
           wordWrap: true,
