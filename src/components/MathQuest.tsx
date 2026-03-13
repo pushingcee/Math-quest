@@ -399,21 +399,63 @@ export default function MathQuest() {
     }
   }, [engine, handleMovePlayer]);
 
+  // ===== RESPONSIVE BOARD SIZING =====
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [boardMaxHeight, setBoardMaxHeight] = useState(0);
+
+  useEffect(() => {
+    let debounceTimer: NodeJS.Timeout | null = null;
+
+    const calculateBoardHeight = () => {
+      const headerHeight = headerRef.current?.offsetHeight ?? 0;
+      // Safety margin for any browser chrome / bottom padding
+      const safetyMargin = 16;
+      const available = window.innerHeight - headerHeight - safetyMargin;
+      setBoardMaxHeight(Math.max(available, 100));
+    };
+
+    const handleResize = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(calculateBoardHeight, 100);
+    };
+
+    calculateBoardHeight();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
+  }, [gameState.screen, gameState.players.length]);
+
   // ===== RENDER =====
 
   return (
     <div
-      className={`flex h-screen overflow-y-auto items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5 ${gameState.screen !== GameScreen.Playing ? 'bg-gradient-to-br from-purple-500 to-purple-800' : ''}`}
+      className={`flex h-screen overflow-hidden items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5 ${gameState.screen !== GameScreen.Playing ? 'bg-gradient-to-br from-purple-500 to-purple-800' : ''}`}
       style={{ backgroundImage: gameState.screen === GameScreen.Playing ? `url('${assetPath('/table-wizzard.jpg')}')` : undefined }}
     >
       <div className={`w-full max-w-6xl rounded-2xl p-4 sm:p-8 ${gameState.screen !== GameScreen.Playing ? 'bg-white/95 shadow-2xl' : ''}`}>
-        <div className="mb-4 text-center sm:mb-8">
-          <h1 className="mb-1 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-3xl font-bold text-transparent sm:mb-2.5 sm:text-5xl">
-            Math Quest
-          </h1>
+        <div ref={headerRef}>
+          <div className="mb-1 text-center sm:mb-4">
+            <h1 className="mb-0.5 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-xl font-bold text-transparent sm:mb-2.5 sm:text-5xl md:text-5xl">
+              Math Quest
+            </h1>
+            {gameState.screen === GameScreen.Playing && (
+              <div className="text-sm font-semibold text-black sm:text-xl">
+                Round <span>{gameState.round}</span> of {gameState.config.maxRounds}
+              </div>
+            )}
+          </div>
+
           {gameState.screen === GameScreen.Playing && (
-            <div className="text-xl font-semibold text-black">
-              Round <span>{gameState.round}</span> of {gameState.config.maxRounds}
+            <div className="mb-1 flex flex-wrap justify-center gap-1 sm:mb-4 sm:gap-4">
+              {gameState.players.map((player, index) => (
+                <PlayerCard
+                  key={player.id}
+                  player={player}
+                  isActive={index === gameState.currentPlayer}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -431,16 +473,6 @@ export default function MathQuest() {
 
         {gameState.screen === GameScreen.Playing && (
           <>
-            <div className="mb-4 flex flex-wrap justify-center gap-2 sm:mb-8 sm:gap-4">
-              {gameState.players.map((player, index) => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  isActive={index === gameState.currentPlayer}
-                />
-              ))}
-            </div>
-
             <PixiBoard
               tiles={gameState.tiles}
               players={gameState.players}
@@ -448,6 +480,7 @@ export default function MathQuest() {
               movingPlayer={gameState.movingPlayer}
               teleporterMode={gameState.teleporterActive}
               selectedTeleportTile={gameState.selectedTeleportTile}
+              maxHeight={boardMaxHeight}
               onTileTeleportClick={(tileIndex) => {
                 engine.selectTeleportTile(tileIndex);
               }}
@@ -455,8 +488,8 @@ export default function MathQuest() {
 
             {/* Check if current player has teleporter available */}
             {gameState.players[gameState.currentPlayer] &&
-            !gameState.pendingItemUse &&
-            ItemSystem.hasItem(gameState.players[gameState.currentPlayer], ItemType.Teleport) ? (
+              !gameState.pendingItemUse &&
+              ItemSystem.hasItem(gameState.players[gameState.currentPlayer], ItemType.Teleport) ? (
               // Show Teleporter prompt instead of dice
               <TeleporterPrompt
                 isOpen={true}
@@ -503,11 +536,10 @@ export default function MathQuest() {
 
             {gameState.bannerMessage && (
               <div
-                className={`mx-auto mt-5 max-w-md rounded-lg p-2.5 text-center font-bold ${
-                  gameState.bannerMessage.type === 'success'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}
+                className={`mx-auto mt-5 max-w-md rounded-lg p-2.5 text-center font-bold ${gameState.bannerMessage.type === 'success'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+                  }`}
               >
                 {gameState.bannerMessage.text}
               </div>

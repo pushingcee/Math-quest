@@ -28,6 +28,7 @@ interface PixiBoardProps {
   teleporterMode?: boolean;
   selectedTeleportTile?: number | null;
   onTileTeleportClick?: (index: number) => void;
+  maxHeight?: number;
 }
 
 const BOARD_BG = 0x334155; // slate-700
@@ -220,8 +221,12 @@ export default function PixiBoard(props: PixiBoardProps) {
 
     const updateSize = () => {
       const width = container.clientWidth;
-      // Viewport is square, sized to the container width (capped at board size)
-      const size = Math.min(width, BOARD_WORLD_SIZE);
+      // Viewport is square — constrained by width, maxHeight, and max world size
+      const constraints = [width, BOARD_WORLD_SIZE];
+      if (props.maxHeight && props.maxHeight > 0) {
+        constraints.push(props.maxHeight);
+      }
+      const size = Math.min(...constraints);
       setViewport({ width: size, height: size });
     };
 
@@ -230,7 +235,7 @@ export default function PixiBoard(props: PixiBoardProps) {
     const observer = new ResizeObserver(updateSize);
     observer.observe(container);
     return () => observer.disconnect();
-  }, []);
+  }, [props.maxHeight]);
 
   if (viewport.width === 0) {
     return (
