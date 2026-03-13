@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { t } from '@/i18n/translations';
 
@@ -18,26 +19,41 @@ export default function TeleporterPrompt({
 }: TeleporterPromptProps) {
   const { language } = useLanguage();
 
+  // Prevent the touch that selected a tile from immediately triggering cancel
+  // on the newly-rendered overlay (touch event race condition)
+  const [overlayReady, setOverlayReady] = useState(false);
+  useEffect(() => {
+    if (selectedTile !== null) {
+      setOverlayReady(false);
+      const timer = setTimeout(() => setOverlayReady(true), 500);
+      return () => clearTimeout(timer);
+    } else {
+      setOverlayReady(false);
+    }
+  }, [selectedTile]);
+
   if (!isOpen) return null;
 
   return (
     <>
-      {/* During selection phase, show modal centered like Dice and allow board clicks */}
+      {/* During selection phase, show prompt at top and allow board clicks through */}
       {selectedTile === null ? (
-        <div className="fixed left-1/2 top-1/2 z-[100] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white/95 p-8 text-center shadow-xl pointer-events-auto">
-          <div className="mb-4 text-6xl">✨</div>
-          <h2 className="mb-2 text-2xl font-bold text-purple-700">
-            {t(language, 'teleporter_label')}
-          </h2>
-          <p className="text-lg text-gray-700">{t(language, 'tapTileToTeleport')}</p>
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pointer-events-none pt-2 sm:pt-4">
+          <div className="rounded-2xl bg-white/95 p-4 text-center shadow-xl pointer-events-auto sm:p-8">
+            <div className="mb-2 text-4xl sm:mb-4 sm:text-6xl">✨</div>
+            <h2 className="mb-1 text-lg font-bold text-purple-700 sm:mb-2 sm:text-2xl">
+              {t(language, 'teleporter_label')}
+            </h2>
+            <p className="text-sm text-gray-700 sm:text-lg">{t(language, 'tapTileToTeleport')}</p>
+          </div>
         </div>
       ) : (
         /* Once tile selected, show confirmation modal with overlay */
         <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          {/* Overlay - capture clicks outside modal to cancel */}
+          {/* Overlay - capture clicks outside modal to cancel (delayed to avoid touch race) */}
           <div
             className="fixed inset-0"
-            onClick={onCancel}
+            onClick={overlayReady ? onCancel : undefined}
           />
 
           {/* Confirmation Modal */}

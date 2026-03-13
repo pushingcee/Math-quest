@@ -25,6 +25,7 @@ interface PixiPlayerTokenProps {
   stackOffset: { x: number; y: number };
   isMoving: boolean;
   isActive: boolean;
+  teleporterMode?: boolean;
 }
 
 const TOKEN_SIZE = 64;
@@ -35,6 +36,7 @@ export default memo(function PixiPlayerToken({
   stackOffset,
   isMoving,
   isActive,
+  teleporterMode = false,
 }: PixiPlayerTokenProps) {
   const { app } = useApplication();
   const [texture, setTexture] = useState<Texture | null>(null);
@@ -173,7 +175,7 @@ export default memo(function PixiPlayerToken({
   if (!texture) return null;
 
   return (
-    <pixiContainer ref={containerRef} zIndex={50}>
+    <pixiContainer ref={containerRef} zIndex={50} eventMode={teleporterMode ? 'none' : 'auto'}>
       {/* Active player glow ellipse — alpha/scale controlled imperatively by startGlowPulse */}
       <pixiGraphics ref={glowRef} draw={drawGlow} />
 

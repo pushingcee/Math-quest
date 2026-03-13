@@ -707,6 +707,7 @@ export class GameEngine {
     this.setState({
       teleporterActive: true,
       selectedTeleportTile: null,
+      diceValue: 0, // Reset dice value when activating teleporter
       // Update pending item context to 'teleport' so TeleporterPrompt shows
       pendingItemUse: this.state.pendingItemUse ? {
         ...this.state.pendingItemUse,
@@ -740,6 +741,13 @@ export class GameEngine {
 
     // Move player to selected tile
     const newPlayers = [...this.state.players];
+
+    // Safety check: ensure player has the item
+    if (!ItemSystem.hasItem(player, ItemType.Teleport)) {
+      this.cancelTeleport();
+      return;
+    }
+
     newPlayers[currentPlayer] = {
       ...player,
       position: selectedTeleportTile,

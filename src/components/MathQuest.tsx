@@ -122,12 +122,13 @@ export default function MathQuest() {
       currentPlayer &&
       !gameState.teleporterActive &&
       !gameState.pendingItemUse &&
-      gameState.diceValue === 0 &&
+      !gameState.isRolling &&
+      gameState.movingPlayer === null &&
       ItemSystem.hasItem(currentPlayer, ItemType.Teleport)
     ) {
       engine.activateTeleporter();
     }
-  }, [gameState.currentPlayer, gameState.players, gameState.teleporterActive, gameState.pendingItemUse, gameState.diceValue, engine]);
+  }, [gameState.currentPlayer, gameState.players, gameState.teleporterActive, gameState.pendingItemUse, gameState.isRolling, gameState.movingPlayer, engine]);
 
   // Helper to get audio path
   const getAudioPath = useCallback((filename: string) => {
@@ -320,8 +321,8 @@ export default function MathQuest() {
         engine.useItem(itemType);
         engine.nextTurn();
       } else if (itemType === ItemType.Teleport) {
-        // Teleporter auto-activates via useEffect when diceValue === 0
-        // Don't advance turn here — TeleporterPrompt handles the flow
+        // Activate teleporter immediately
+        engine.activateTeleporter();
       } else {
         // Shield and PointBooster are passive inventory items:
         // Shield auto-activates on obstacle tiles, PointBooster on math problems.
@@ -488,6 +489,7 @@ export default function MathQuest() {
 
             {/* Check if current player has teleporter available */}
             {gameState.players[gameState.currentPlayer] &&
+              gameState.teleporterActive &&
               !gameState.pendingItemUse &&
               ItemSystem.hasItem(gameState.players[gameState.currentPlayer], ItemType.Teleport) ? (
               // Show Teleporter prompt instead of dice

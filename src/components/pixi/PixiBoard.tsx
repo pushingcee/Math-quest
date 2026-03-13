@@ -196,6 +196,7 @@ function PixiBoardContent({
               stackOffset={offset}
               isMoving={movingPlayer === player.id}
               isActive={player.id === currentPlayer}
+              teleporterMode={teleporterMode}
             />
           );
         })}
@@ -252,7 +253,7 @@ export default function PixiBoard(props: PixiBoardProps) {
       ref={containerRef}
       className="mx-auto w-full max-w-[863px]"
       id="board"
-      style={{ height: viewport.height }}
+      style={{ height: viewport.height, touchAction: 'none' }}
     >
       <Application
         width={viewport.width}
@@ -261,7 +262,7 @@ export default function PixiBoard(props: PixiBoardProps) {
         antialias={typeof window !== 'undefined' && window.devicePixelRatio <= 1.5}
         autoDensity
         resolution={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
-        className="block rounded-xl"
+        className="block rounded-xl [touch-action:none]"
       >
         <PixiBoardContent
           {...props}
