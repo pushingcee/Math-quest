@@ -201,8 +201,10 @@ function PixiBoardContent({
       </pixiContainer>
     </pixiContainer>
 
-    {/* FPS counter — fixed to bottom-right of viewport */}
-    <FpsCounter x={viewportWidth - 8} y={viewportHeight - 8} />
+    {/* FPS counter — dev only */}
+    {process.env.NODE_ENV === 'development' && (
+      <FpsCounter x={viewportWidth - 8} y={viewportHeight - 8} />
+    )}
   </>
   );
 }
@@ -251,9 +253,9 @@ export default function PixiBoard(props: PixiBoardProps) {
         width={viewport.width}
         height={viewport.height}
         backgroundAlpha={0}
-        antialias
+        antialias={typeof window !== 'undefined' && window.devicePixelRatio <= 1.5}
         autoDensity
-        resolution={typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1}
+        resolution={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
         className="block rounded-xl"
       >
         <PixiBoardContent
