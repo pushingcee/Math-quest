@@ -432,7 +432,7 @@ export default function MathQuest() {
 
   return (
     <div
-      className={`flex h-screen overflow-hidden items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5 ${gameState.screen !== GameScreen.Playing ? 'bg-gradient-to-br from-purple-500 to-purple-800' : ''}`}
+      className={`flex h-screen items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5 ${gameState.screen !== GameScreen.Playing ? 'bg-gradient-to-br from-purple-500 to-purple-800' : ''}`}
       style={{ backgroundImage: gameState.screen === GameScreen.Playing ? `url('${assetPath('/table-wizzard.jpg')}')` : undefined }}
     >
       <div className={`w-full max-w-6xl rounded-2xl p-4 sm:p-8 ${gameState.screen !== GameScreen.Playing ? 'bg-white/95 shadow-2xl' : ''}`}>
