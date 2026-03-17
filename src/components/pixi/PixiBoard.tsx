@@ -86,6 +86,14 @@ function PixiBoardContent({
   const { app } = useApplication();
   const worldRef = useRef<Container>(null);
 
+  // Allow browser pinch-zoom on the canvas by disabling PixiJS's
+  // default preventDefault() on pointer events.
+  useEffect(() => {
+    if (app?.renderer?.events) {
+      (app.renderer.events as unknown as { autoPreventDefault: boolean }).autoPreventDefault = false;
+    }
+  }, [app]);
+
   // Load inner board background texture
   const [bgTexture, setBgTexture] = useState<Texture | null>(null);
   useEffect(() => { loadBgTexture().then(setBgTexture); }, []);
