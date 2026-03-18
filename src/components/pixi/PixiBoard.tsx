@@ -86,6 +86,20 @@ function PixiBoardContent({
   const { app } = useApplication();
   const worldRef = useRef<Container>(null);
 
+  // Allow browser pinch-zoom on the canvas.
+  // PixiJS sets canvas.style.touchAction = 'none' inline during init,
+  // which overrides our CSS class — so we must override it back here.
+  // Also disable autoPreventDefault so PixiJS doesn't call preventDefault()
+  // on pointer events, which would cancel the browser's zoom gesture.
+  useEffect(() => {
+    if (app?.canvas) {
+      (app.canvas as HTMLCanvasElement).style.touchAction = 'manipulation';
+    }
+    if (app?.renderer?.events) {
+      (app.renderer.events as unknown as { autoPreventDefault: boolean }).autoPreventDefault = false;
+    }
+  }, [app]);
+
   // Load inner board background texture
   const [bgTexture, setBgTexture] = useState<Texture | null>(null);
   useEffect(() => { loadBgTexture().then(setBgTexture); }, []);
