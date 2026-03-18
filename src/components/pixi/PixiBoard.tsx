@@ -33,7 +33,7 @@ interface PixiBoardProps {
 
 const BOARD_BG = 0x334155; // slate-700
 const TILE_GAP_COLOR = 0x6b7280; // gray-500 — visible in the gaps between tiles
-const BOARD_PADDING = 8;
+const BOARD_PADDING = 0;
 const BOARD_WORLD_SIZE = 863; // fixed world size — 750 * 1.15 (scaled up 15%)
 
 function FpsCounter({ x, y }: { x: number; y: number }) {
