@@ -276,7 +276,11 @@ export default function PixiBoard(props: PixiBoardProps) {
         antialias={typeof window !== 'undefined' && window.devicePixelRatio <= 1.5}
         autoDensity
         resolution={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
-        className="block rounded-xl [touch-action:manipulation]"
+        className="block rounded-xl [touch-action:manipulation] [border:3px_solid_rgba(180,140,60,0.9)]"
+        style={{
+          boxShadow:
+            'inset 0 1px 0 rgba(255,220,100,0.4), inset 0 -1px 0 rgba(0,0,0,0.5), 0 25px 80px rgba(0,0,0,0.85)',
+        }}
       >
         <PixiBoardContent
           {...props}
