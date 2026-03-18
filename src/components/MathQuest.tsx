@@ -410,7 +410,8 @@ export default function MathQuest() {
     const calculateBoardHeight = () => {
       const headerHeight = headerRef.current?.offsetHeight ?? 0;
       // Safety margin for any browser chrome / bottom padding
-      const safetyMargin = 16;
+      // Account for outer padding (p-2 / sm:p-5) + bottom breathing room (sm:pb-6 / lg:pb-10)
+      const safetyMargin = window.innerWidth >= 1024 ? 60 : window.innerWidth >= 640 ? 44 : 16;
       const available = window.innerHeight - headerHeight - safetyMargin;
       setBoardMaxHeight(Math.max(available, 100));
     };
@@ -435,7 +436,7 @@ export default function MathQuest() {
       className={`flex h-screen items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5 ${gameState.screen !== GameScreen.Playing ? 'bg-gradient-to-br from-purple-500 to-purple-800' : ''}`}
       style={{ backgroundImage: gameState.screen === GameScreen.Playing ? `url('${assetPath('/table-wizzard.jpg')}')` : undefined }}
     >
-      <div className={`w-full max-w-6xl rounded-2xl p-4 sm:p-8 ${gameState.screen !== GameScreen.Playing ? 'bg-white/95 shadow-2xl' : ''}`}>
+      <div className={`w-full max-w-6xl rounded-2xl ${gameState.screen !== GameScreen.Playing ? 'bg-white/95 shadow-2xl p-4 sm:p-8' : 'sm:pb-6 lg:pb-10'}`}>
         <div ref={headerRef}>
           <div className="mb-1 text-center sm:mb-4">
             <h1 className="mb-0.5 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-xl font-bold text-transparent sm:mb-2.5 sm:text-5xl md:text-5xl">
@@ -570,6 +571,7 @@ export default function MathQuest() {
           type={gameState.message?.type || 'success'}
           streak={gameState.message?.streak}
           problem={gameState.message?.problem}
+          userAnswer={gameState.message?.userAnswer}
           onClose={handleCloseMessage}
           autoClose={gameState.config.autoCloseModal}
         />

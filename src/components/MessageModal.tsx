@@ -14,6 +14,7 @@ interface MessageModalProps {
   streak?: number;
   autoClose?: boolean;
   problem?: string;
+  userAnswer?: number;
 }
 
 const wrongAnswerEmojis = [
@@ -57,7 +58,7 @@ const correctAnswerEmojis = [
   '✨', // Sparkles
 ];
 
-export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true, problem }: MessageModalProps) {
+export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true, problem, userAnswer }: MessageModalProps) {
   const { language } = useLanguage();
   const mathRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +139,11 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
               className="max-w-[350px] px-2 py-2 whitespace-normal break-words"
             ></div>
             <span className="shrink-0">= ?</span>
+          </div>
+        )}
+        {userAnswer !== undefined && (
+          <div className={`text-lg font-semibold ${type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+            {t(language, 'yourAnswer')}: {userAnswer}
           </div>
         )}
         <div className="my-5 text-xl text-black">

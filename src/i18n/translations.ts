@@ -121,8 +121,8 @@ export const translations = {
 
     // Scoring Messages
     pointsGained: '+{points} точки!',
-    answerWasWithPenalty: 'Отговорът беше {answer}. -{points} точки!',
-    answerWas: 'Отговорът беше {answer}.',
+    answerWasWithPenalty: 'Отговорът е {answer}. -{points} точки!',
+    answerWas: 'Отговорът е {answer}.',
     ranOutOfTimeWithPenalty: '⏰ Времето изтече! Правилният отговор беше {answer}. -{points} точки!',
     ranOutOfTime: '⏰ Времето изтече! Правилният отговор беше {answer}.',
 

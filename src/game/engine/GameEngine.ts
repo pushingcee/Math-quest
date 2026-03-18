@@ -515,7 +515,8 @@ export class GameEngine {
         text: result.message,
         type: result.correct ? MessageType.Success : MessageType.Error,
         streak: result.newStreak,
-        problem: this.state.mathProblem.question
+        problem: this.state.mathProblem.question,
+        userAnswer
       }
     });
 

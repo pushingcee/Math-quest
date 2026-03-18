@@ -18,6 +18,7 @@ export interface GameMessage {
   type: MessageType;
   streak?: number;
   problem?: string;
+  userAnswer?: number;
 }
 
 export interface BannerMessage {

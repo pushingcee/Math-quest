@@ -92,12 +92,15 @@ function PixiBoardContent({
   // Also disable autoPreventDefault so PixiJS doesn't call preventDefault()
   // on pointer events, which would cancel the browser's zoom gesture.
   useEffect(() => {
-    if (app?.canvas) {
-      (app.canvas as HTMLCanvasElement).style.touchAction = 'manipulation';
-    }
-    if (app?.renderer?.events) {
-      (app.renderer.events as unknown as { autoPreventDefault: boolean }).autoPreventDefault = false;
-    }
+    const timer = setTimeout(() => {
+      if (app?.canvas) {
+        (app.canvas as HTMLCanvasElement).style.touchAction = 'manipulation';
+      }
+      if (app?.renderer?.events) {
+        (app.renderer.events as unknown as { autoPreventDefault: boolean }).autoPreventDefault = false;
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [app]);
 
   // Load inner board background texture
@@ -272,7 +275,7 @@ export default function PixiBoard(props: PixiBoardProps) {
         touchAction: 'manipulation',
         outline: '3px solid rgba(180, 140, 60, 0.9)',
         boxShadow:
-          'inset 0 1px 0 rgba(255,220,100,0.4), inset 0 -1px 0 rgba(0,0,0,0.5), 0 25px 80px rgba(0,0,0,0.85)',
+          'inset 0 1px 0 rgba(255,220,100,0.4), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 60px 20px rgba(0,0,0,0.8), 0 0 140px 50px rgba(0,0,0,0.6), 0 20px 80px 30px rgba(0,0,0,0.9)',
       }}
     >
       <Application
