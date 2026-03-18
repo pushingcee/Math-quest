@@ -265,7 +265,7 @@ export default function PixiBoard(props: PixiBoardProps) {
   return (
     <div
       ref={containerRef}
-      className="mx-auto w-full max-w-[863px] rounded-xl"
+      className="mx-auto w-full max-w-[863px] overflow-hidden rounded-xl"
       id="board"
       style={{
         height: viewport.height,
@@ -282,7 +282,7 @@ export default function PixiBoard(props: PixiBoardProps) {
         antialias={typeof window !== 'undefined' && window.devicePixelRatio <= 1.5}
         autoDensity
         resolution={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
-        className="block rounded-xl [touch-action:manipulation]"
+        className="!h-full !w-full block rounded-xl [touch-action:manipulation]"
       >
         <PixiBoardContent
           {...props}
