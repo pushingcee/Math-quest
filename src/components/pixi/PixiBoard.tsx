@@ -268,16 +268,18 @@ export default function PixiBoard(props: PixiBoardProps) {
   return (
     <div
       ref={containerRef}
-      className="mx-auto w-full max-w-[863px] overflow-hidden"
+      className="mx-auto w-full max-w-[863px]"
       id="board"
       style={{
         perspective: '1200px',
         perspectiveOrigin: '50% 40%',
+        padding: '12px 0',
       }}
     >
       <div
         style={{
           height: viewport.height,
+          overflow: 'hidden',
           touchAction: 'manipulation',
           outline: '3px solid rgba(180, 140, 60, 0.9)',
           boxShadow:
