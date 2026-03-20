@@ -271,28 +271,37 @@ export default function PixiBoard(props: PixiBoardProps) {
       className="mx-auto w-full max-w-[863px] overflow-hidden"
       id="board"
       style={{
-        height: viewport.height,
-        touchAction: 'manipulation',
-        outline: '3px solid rgba(180, 140, 60, 0.9)',
-        boxShadow:
-          'inset 0 1px 0 rgba(255,220,100,0.4), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 60px 20px rgba(0,0,0,0.8), 0 0 140px 50px rgba(0,0,0,0.6), 0 20px 80px 30px rgba(0,0,0,0.9)',
+        perspective: '1200px',
+        perspectiveOrigin: '50% 40%',
       }}
     >
-      <Application
-        width={viewport.width}
-        height={viewport.height}
-        backgroundAlpha={0}
-        antialias={typeof window !== 'undefined' && window.devicePixelRatio <= 1.5}
-        autoDensity
-        resolution={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
-        className="!h-full !w-full block [touch-action:manipulation]"
+      <div
+        style={{
+          height: viewport.height,
+          touchAction: 'manipulation',
+          outline: '3px solid rgba(180, 140, 60, 0.9)',
+          boxShadow:
+            'inset 0 1px 0 rgba(255,220,100,0.4), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 60px 20px rgba(0,0,0,0.8), 0 0 140px 50px rgba(0,0,0,0.6), 0 20px 80px 30px rgba(0,0,0,0.9)',
+          transform: 'rotateX(3deg)',
+          transformStyle: 'preserve-3d' as const,
+        }}
       >
-        <PixiBoardContent
-          {...props}
-          viewportWidth={viewport.width}
-          viewportHeight={viewport.height}
-        />
-      </Application>
+        <Application
+          width={viewport.width}
+          height={viewport.height}
+          backgroundAlpha={0}
+          antialias={typeof window !== 'undefined' && window.devicePixelRatio <= 1.5}
+          autoDensity
+          resolution={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
+          className="!h-full !w-full block [touch-action:manipulation]"
+        >
+          <PixiBoardContent
+            {...props}
+            viewportWidth={viewport.width}
+            viewportHeight={viewport.height}
+          />
+        </Application>
+      </div>
     </div>
   );
 }
