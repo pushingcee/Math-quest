@@ -271,9 +271,9 @@ export default function PixiBoard(props: PixiBoardProps) {
       className="mx-auto w-full max-w-[863px]"
       id="board"
       style={{
-        perspective: '1200px',
+        perspective: '800px',
         perspectiveOrigin: '50% 40%',
-        padding: '12px 0',
+        padding: '24px 0',
       }}
     >
       <div
@@ -284,7 +284,7 @@ export default function PixiBoard(props: PixiBoardProps) {
           outline: '3px solid rgba(180, 140, 60, 0.9)',
           boxShadow:
             'inset 0 1px 0 rgba(255,220,100,0.4), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 60px 20px rgba(0,0,0,0.8), 0 0 140px 50px rgba(0,0,0,0.6), 0 20px 80px 30px rgba(0,0,0,0.9)',
-          transform: 'rotateX(3deg)',
+          transform: 'rotateX(6deg)',
           transformStyle: 'preserve-3d' as const,
         }}
       >
