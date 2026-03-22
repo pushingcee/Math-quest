@@ -5,28 +5,6 @@ const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'];
 
 export class PlayerSystem {
   /**
-   * Initialize players for a new game (default avatars)
-   */
-  static initializePlayers(count: number): Player[] {
-    const players: Player[] = [];
-    for (let i = 0; i < count; i++) {
-      const { coins, inventory } = ItemSystem.initializePlayerInventory();
-      players.push({
-        id: i,
-        name: `Player ${i + 1}`,
-        position: 0,
-        score: 0,
-        color: playerColors[i],
-        streak: 0,
-        avatarIndex: i, // Default to matching index
-        coins,
-        inventory,
-      });
-    }
-    return players;
-  }
-
-  /**
    * Initialize players with selected avatars and colors
    */
   static initializePlayersWithAvatars(avatarIndices: number[], colors: string[]): Player[] {
@@ -49,16 +27,6 @@ export class PlayerSystem {
   }
 
   /**
-   * Update player score
-   */
-  static updatePlayerScore(player: Player, scoreChange: number): Player {
-    return {
-      ...player,
-      score: Math.max(0, player.score + scoreChange)
-    };
-  }
-
-  /**
    * Update player streak
    */
   static updatePlayerStreak(player: Player, newStreak: number): Player {
@@ -66,29 +34,5 @@ export class PlayerSystem {
       ...player,
       streak: newStreak
     };
-  }
-
-  /**
-   * Reset player streak
-   */
-  static resetPlayerStreak(player: Player): Player {
-    return {
-      ...player,
-      streak: 0
-    };
-  }
-
-  /**
-   * Get player by ID
-   */
-  static getPlayerById(players: Player[], playerId: number): Player | undefined {
-    return players.find(p => p.id === playerId);
-  }
-
-  /**
-   * Get next player ID in turn order
-   */
-  static getNextPlayerId(currentPlayerId: number, totalPlayers: number): number {
-    return (currentPlayerId + 1) % totalPlayers;
   }
 }

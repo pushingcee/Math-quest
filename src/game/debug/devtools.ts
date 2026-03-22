@@ -22,8 +22,8 @@ export class DevTools {
       return;
     }
 
-    if (tileIndex < 0 || tileIndex >= state.config.boardSize) {
-      console.error(`Tile index must be between 0 and ${state.config.boardSize - 1}`);
+    if (tileIndex < 0 || tileIndex >= state.tiles.length) {
+      console.error(`Tile index must be between 0 and ${state.tiles.length - 1}`);
       return;
     }
 
@@ -42,15 +42,7 @@ export class DevTools {
       position: tileIndex,
     };
 
-    // Manually update state
-    const currentState = this.engine.getState();
-    (this.engine as any).state = {
-      ...currentState,
-      players: newPlayers,
-    };
-
-    // Notify listeners of state change
-    (this.engine as any).notifyListeners();
+    this.engine.patchState({ players: newPlayers });
 
     console.log(`✓ Player now at tile ${tileIndex}`);
 
@@ -138,15 +130,7 @@ export class DevTools {
       coins: newCoins,
     };
 
-    // Update engine state
-    const currentState = this.engine.getState();
-    (this.engine as any).state = {
-      ...currentState,
-      players: newPlayers,
-    };
-
-    // Notify listeners
-    (this.engine as any).notifyListeners();
+    this.engine.patchState({ players: newPlayers });
 
     console.log(`💰 Added ${amount} coins to ${player.name} (${oldCoins} → ${newCoins})`);
   }

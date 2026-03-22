@@ -19,18 +19,12 @@ export enum TileType {
   Regular = 'regular',
   Obstacle = 'obstacle',
   Shop = 'shop',
+  Modifier = 'modifier',
 }
 
 export enum ObstacleType {
   Slip = 'slip',
   Trap = 'trap',
-}
-
-export enum SpecialTilePosition {
-  Start = 0,
-  Bonus = 10,
-  Challenge = 20,
-  Penalty = 30,
 }
 
 export enum Difficulty {
@@ -46,32 +40,9 @@ export enum TileLandingResult {
 }
 
 /**
- * Special tile scoring constants
+ * Game-rule scoring constants (not tile-specific — tile scoring is in board configs)
  */
 export const TileScoring = {
-  [SpecialTilePosition.Start]: {
-    points: 50,
-    label: 'START<br>+50pts',
-    message: 'Landed on START! +50 points!',
-  },
-  [SpecialTilePosition.Bonus]: {
-    difficulty: Difficulty.Medium,
-    points: 2,
-    label: 'BONUS<br>×2pts',
-    message: 'BONUS! Your next correct answer worth double!',
-  },
-  [SpecialTilePosition.Challenge]: {
-    difficulty: Difficulty.Hard,
-    points: 100,
-    label: 'CHALLENGE<br>±100pts',
-    message: 'CHALLENGE! High risk, high reward!',
-  },
-  [SpecialTilePosition.Penalty]: {
-    points: -30,
-    label: 'PENALTY<br>-30pts',
-    message: 'PENALTY! -30 points!',
-    messageNoDeduct: 'PENALTY! (No points deducted)',
-  },
   PassStart: {
     points: 50,
     message: 'Passed START! +50 points!',

@@ -77,13 +77,6 @@ export class ScoringSystem {
   }
 
   /**
-   * Check if player should get celebration (streak >= 3)
-   */
-  static shouldCelebrate(streak: number): boolean {
-    return streak >= 3;
-  }
-
-  /**
    * Apply score change to player (ensures score doesn't go negative)
    */
   static applyScoreChange(player: Player, scoreChange: number): Player {

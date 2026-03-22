@@ -1,0 +1,74 @@
+{
+  "id": "default",
+  "name": "Classic Board",
+  "gridCols": 13,
+  "gridRows": 13,
+  "startTileId": "t1",
+  "tiles": [
+    {
+      "id": "corner-start",
+      "row": 12, "col": 12, "span": 2,
+      "type": "corner",
+      "connectsTo": null,
+      "label": "START<br>+50pts",
+      "onLand": { "scoreChange": 50, "message": "Landed on START! +50 points!" }
+    },
+
+    { "id": "t1",  "row": 13, "col": 11, "type": "regular",  "connectsTo": "t2" },
+    { "id": "t2",  "row": 13, "col": 10, "type": "regular",  "connectsTo": "t3" },
+    { "id": "t3",  "row": 13, "col": 9,  "type": "regular",  "connectsTo": "t4" },
+    { "id": "t4",  "row": 13, "col": 8,  "type": "regular",  "connectsTo": "t5" },
+    { "id": "t5",  "row": 13, "col": 7,  "type": "regular",  "connectsTo": "t6" },
+    { "id": "t6",  "row": 13, "col": 6,  "type": "regular",  "connectsTo": "t7" },
+    { "id": "t7",  "row": 13, "col": 5,  "type": "obstacle", "connectsTo": "t8", "obstacleType": "slip" },
+    { "id": "t8",  "row": 13, "col": 4,  "type": "regular",  "connectsTo": "t9" },
+    { "id": "t9",  "row": 13, "col": 3,  "type": "regular",  "connectsTo": "t10a" },
+
+    {
+      "id": "modifier-bonus",
+      "row": 12, "col": 1, "span": 2,
+      "type": "modifier",
+      "connectsTo": null,
+      "label": "BONUS<br>×2pts",
+      "modifierEffect": { "pointsMultiplier": 2 }
+    },
+
+    { "id": "t10a", "row": 13, "col": 2,  "type": "regular",  "connectsTo": "t10b" },
+    { "id": "t10b", "row": 13, "col": 1,  "type": "regular",  "connectsTo": "t10c" },
+    { "id": "t10c", "row": 12, "col": 1,  "type": "regular",  "connectsTo": "t11" },
+
+    { "id": "t11", "row": 11, "col": 1,  "type": "regular",  "connectsTo": "t12" },
+    { "id": "t12", "row": 10, "col": 1,  "type": "regular",  "connectsTo": "t13" },
+    { "id": "t13", "row": 9,  "col": 1,  "type": "regular",  "connectsTo": "t14" },
+    { "id": "t14", "row": 8,  "col": 1,  "type": "regular",  "connectsTo": "t15" },
+    { "id": "t15", "row": 7,  "col": 1,  "type": "regular",  "connectsTo": "t16" },
+    { "id": "t16", "row": 6,  "col": 1,  "type": "regular",  "connectsTo": "t17" },
+    { "id": "t17", "row": 5,  "col": 1,  "type": "regular",  "connectsTo": "t18" },
+    { "id": "t18", "row": 4,  "col": 1,  "type": "obstacle", "connectsTo": "t19", "obstacleType": "trap" },
+    { "id": "t19", "row": 3,  "col": 1,  "type": "regular",     "connectsTo": "shop-tl" },
+
+    { "id": "shop-tl", "row": 1, "col": 1, "span": 2, "type": "shop", "connectsTo": "t21" },
+
+    { "id": "t21", "row": 1,  "col": 3,  "type": "regular",  "connectsTo": "t22" },
+    { "id": "t22", "row": 1,  "col": 4,  "type": "regular",  "connectsTo": "t23" },
+    { "id": "t23", "row": 1,  "col": 5,  "type": "regular",  "connectsTo": "t24" },
+    { "id": "t24", "row": 1,  "col": 6,  "type": "regular",  "connectsTo": "t25" },
+    { "id": "t25", "row": 1,  "col": 7,  "type": "regular",  "connectsTo": "t26" },
+    { "id": "t26", "row": 1,  "col": 8,  "type": "regular",  "connectsTo": "t27" },
+    { "id": "t27", "row": 1,  "col": 9,  "type": "regular",  "connectsTo": "t28" },
+    { "id": "t28", "row": 1,  "col": 10, "type": "obstacle", "connectsTo": "t29", "obstacleType": "slip" },
+    { "id": "t29", "row": 1,  "col": 11, "type": "regular",     "connectsTo": "shop-tr" },
+
+    { "id": "shop-tr", "row": 1, "col": 12, "span": 2, "type": "shop", "connectsTo": "t31" },
+
+    { "id": "t31", "row": 3,  "col": 13, "type": "regular",  "connectsTo": "t32" },
+    { "id": "t32", "row": 4,  "col": 13, "type": "regular",  "connectsTo": "t33" },
+    { "id": "t33", "row": 5,  "col": 13, "type": "regular",  "connectsTo": "t34" },
+    { "id": "t34", "row": 6,  "col": 13, "type": "regular",  "connectsTo": "t35" },
+    { "id": "t35", "row": 7,  "col": 13, "type": "regular",  "connectsTo": "t36" },
+    { "id": "t36", "row": 8,  "col": 13, "type": "regular",  "connectsTo": "t37" },
+    { "id": "t37", "row": 9,  "col": 13, "type": "regular",  "connectsTo": "t38" },
+    { "id": "t38", "row": 10, "col": 13, "type": "obstacle", "connectsTo": "t39", "obstacleType": "trap" },
+    { "id": "t39", "row": 11, "col": 13, "type": "regular",  "connectsTo": "t1" }
+  ]
+}

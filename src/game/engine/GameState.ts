@@ -2,6 +2,7 @@ import { Player, MathProblem, TileData, GameScreen } from '@/types/game';
 import { ImportedProblemsData, ImportedProblem } from '@/types/imported-problems';
 import { MessageType } from '@/game/constants/enums';
 import { ItemType } from '@/types/items';
+import { BoardConfig } from '@/game/board/BoardConfig';
 
 export interface GameConfig {
   negativePointsEnabled: boolean;
@@ -11,6 +12,7 @@ export interface GameConfig {
   displayProblemsInTiles: boolean;
   maxRounds: number;
   boardSize: number;
+  boardConfig?: BoardConfig;
 }
 
 export interface GameMessage {

@@ -6,6 +6,11 @@ import { Container, Graphics as PixiGraphics, Sprite as PixiSprite, Text as Pixi
 import { TileData, Player } from '@/types/game';
 import { TILE_GAP } from '@/game/board/BoardLayout';
 import { BoardGraph } from '@/game/board/BoardGraph';
+import { BoardConfig } from '@/game/board/BoardConfig';
+import { BoardConfigLoader } from '@/game/board/BoardConfigLoader';
+import defaultBoardJson from '@/game/board/boards/default.board.json';
+
+const defaultBoard = BoardConfigLoader.parse(defaultBoardJson);
 import { useCamera } from './useCamera';
 import PixiTile from './PixiTile';
 import PixiPlayerToken from './PixiPlayerToken';
@@ -30,6 +35,7 @@ interface PixiBoardProps {
   selectedTeleportTile?: number | null;
   onTileTeleportClick?: (index: number) => void;
   maxHeight?: number;
+  boardConfig?: BoardConfig;
 }
 
 const BOARD_BG = 0x334155; // slate-700
@@ -81,6 +87,7 @@ function PixiBoardContent({
   teleporterMode,
   selectedTeleportTile,
   onTileTeleportClick,
+  boardConfig,
   viewportWidth,
   viewportHeight,
 }: PixiBoardProps & { viewportWidth: number; viewportHeight: number }) {
@@ -110,9 +117,10 @@ function PixiBoardContent({
 
   // Board graph: doubly-linked tile structure with layout + pawn slots
   const innerSize = BOARD_WORLD_SIZE - BOARD_PADDING * 2;
+  const config = boardConfig ?? defaultBoard;
   const boardGraph = useMemo(
-    () => BoardGraph.fromLayout(innerSize, tiles),
-    [innerSize, tiles]
+    () => BoardGraph.fromLayout(innerSize, tiles, config),
+    [innerSize, tiles, config]
   );
 
   // Sync pawn slots whenever players move
@@ -123,12 +131,14 @@ function PixiBoardContent({
   // Derived layout values for rendering (shadows, gap bg, background image)
   const layout = useMemo(() => {
     const allTiles = boardGraph.getAllTiles();
-    const cellSize = innerSize / 11;
+    const gridMax = Math.max(config.gridCols, config.gridRows);
+    const cellSize = innerSize / gridMax;
     return {
       tiles: allTiles.map((t) => t.layout),
+      modifiers: boardGraph.getModifiers(),
       cellSize,
     };
-  }, [boardGraph, innerSize]);
+  }, [boardGraph, innerSize, config]);
 
   // Find the active player's world-space position for the camera
   const activePlayer = players[currentPlayer];
@@ -168,6 +178,18 @@ function PixiBoardContent({
     [layout]
   );
 
+  // Modifier overlays — semi-transparent gold rectangles with label text
+  const drawModifierOverlays = useCallback(
+    (g: PixiGraphics) => {
+      g.clear();
+      for (const mod of layout.modifiers) {
+        g.rect(mod.x, mod.y, mod.width, mod.height)
+          .fill({ color: 0xfbbf24, alpha: 0.5 });
+      }
+    },
+    [layout.modifiers]
+  );
+
   // Camera: smoothly pans/zooms the world container
   useCamera(worldRef, cameraTarget, {
     viewportWidth,
@@ -179,14 +201,15 @@ function PixiBoardContent({
   return (<>
     <pixiContainer ref={worldRef}>
 
-      {/* Inner board background image */}
+      {/* Inner board background image (fills area inside the perimeter tiles) */}
+      {/* Full-canvas background image — base layer behind everything */}
       {bgTexture && (
         <pixiSprite
           texture={bgTexture}
-          x={BOARD_PADDING + layout.cellSize}
-          y={BOARD_PADDING + layout.cellSize}
-          width={layout.cellSize * 9}
-          height={layout.cellSize * 9}
+          x={0}
+          y={0}
+          width={BOARD_WORLD_SIZE}
+          height={BOARD_WORLD_SIZE}
         />
       )}
 
@@ -215,6 +238,34 @@ function PixiBoardContent({
               onTeleportClick={onTileTeleportClick}
             />
           );
+        })}
+      </pixiContainer>
+
+      {/* Modifier overlays — rendered above tiles */}
+      <pixiContainer x={BOARD_PADDING} y={BOARD_PADDING}>
+        <pixiGraphics draw={drawModifierOverlays} />
+        {layout.modifiers.map((mod) => {
+          const labelText = (mod.label || '')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<[^>]*>/g, '');
+          return labelText ? (
+            <pixiText
+              key={mod.id}
+              text={labelText}
+              x={mod.centerX}
+              y={mod.centerY}
+              anchor={{ x: 0.5, y: 0.5 }}
+              style={{
+                fontFamily: 'Arial',
+                fontSize: Math.max(8, mod.width * 0.12),
+                fill: 0xffffff,
+                fontWeight: 'bold',
+                align: 'center',
+                wordWrap: true,
+                wordWrapWidth: mod.width - 4,
+              }}
+            />
+          ) : null;
         })}
       </pixiContainer>
 

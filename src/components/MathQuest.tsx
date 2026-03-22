@@ -471,6 +471,7 @@ export default function MathQuest() {
               teleporterMode={gameState.teleporterActive}
               selectedTeleportTile={gameState.selectedTeleportTile}
               maxHeight={boardMaxHeight}
+              boardConfig={gameState.config.boardConfig}
               onTileTeleportClick={(tileIndex) => {
                 engine.selectTeleportTile(tileIndex);
               }}

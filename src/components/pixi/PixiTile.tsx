@@ -60,7 +60,7 @@ export default memo(function PixiTile({
   const { index, type, points, question, label } = tile;
   const { x, y, width, height } = layout;
   const isCorner = type === TileType.Corner;
-  const isRegular = type !== TileType.Corner && type !== TileType.Shop && type !== TileType.Obstacle;
+  const isRegular = type === TileType.Regular;
   const isShop = type === TileType.Shop;
 
 

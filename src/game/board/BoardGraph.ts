@@ -1,14 +1,14 @@
 /**
  * BoardGraph: doubly-linked list of traversable tiles.
  *
- * Built from the existing BoardLayout geometry + BoardSystem tile data.
- * Corner tiles (0, 10, 20, 30) exist in the graph for rendering but are
- * NOT linked into the traversal chain — movement skips them implicitly.
+ * Built from a BoardConfig + BoardSystem tile data.
+ * Tiles with connectsTo: null are NOT linked into the traversal chain
+ * — they exist for rendering only.
  */
 
 import { TileData } from '@/types/game';
-import { TileType } from '@/game/constants/enums';
-import { computeBoardLayout, TileLayout } from './BoardLayout';
+import { computeBoardLayout, ModifierLayout } from './BoardLayout';
+import { BoardConfig } from './BoardConfig';
 import { BoardTileNode, PawnSlot, generatePawnSlots } from './BoardTile';
 
 export class BoardGraph {
@@ -18,18 +18,19 @@ export class BoardGraph {
   private tilesByIndex: Map<number, BoardTileNode> = new Map();
   /** First traversable tile in the chain */
   private head: BoardTileNode | null = null;
+  /** Modifier overlay layouts (not game tiles — rendering only) */
+  private modifierLayouts: ModifierLayout[] = [];
 
   private constructor() {}
 
   // ── Factory ──────────────────────────────────────────────
 
   /**
-   * Build the graph from a board pixel size and tile data array.
-   * This wraps the existing `computeBoardLayout()` so pixel geometry
-   * is computed exactly as before.
+   * Build the graph from a board config, pixel size, and tile data array.
+   * Tiles are linked according to config connectsTo, not by index order.
    */
-  static fromLayout(boardPixelSize: number, tileData: TileData[]): BoardGraph {
-    const layoutResult = computeBoardLayout(boardPixelSize);
+  static fromLayout(boardPixelSize: number, tileData: TileData[], config: BoardConfig): BoardGraph {
+    const layoutResult = computeBoardLayout(boardPixelSize, config);
     const graph = new BoardGraph();
 
     // 1. Create all tile nodes
@@ -38,7 +39,7 @@ export class BoardGraph {
       if (!data) continue;
 
       const node: BoardTileNode = {
-        id: `tile-${layout.index}`,
+        id: layout.id,
         index: layout.index,
         tileData: data,
         layout,
@@ -51,22 +52,24 @@ export class BoardGraph {
       graph.tilesByIndex.set(node.index, node);
     }
 
-    // 2. Link non-corner tiles in index order
-    const traversable = Array.from(graph.tilesByIndex.values())
-      .filter((n) => n.tileData.type !== TileType.Corner)
-      .sort((a, b) => a.index - b.index);
+    // 2. Link tiles according to config connectsTo
+    for (const tileConfig of config.tiles) {
+      if (!tileConfig.connectsTo) continue;
 
-    for (let i = 0; i < traversable.length; i++) {
-      const current = traversable[i];
-      const next = traversable[(i + 1) % traversable.length];
-      const prev = traversable[(i - 1 + traversable.length) % traversable.length];
-      current.next = next;
-      current.prev = prev;
+      const source = graph.tilesById.get(tileConfig.id);
+      const target = graph.tilesById.get(tileConfig.connectsTo);
+      if (source && target) {
+        source.next = target;
+        target.prev = source;
+      }
     }
 
-    if (traversable.length > 0) {
-      graph.head = traversable[0];
-    }
+    // 3. Set head to the config's start tile
+    const startNode = graph.tilesById.get(config.startTileId);
+    graph.head = startNode ?? null;
+
+    // 4. Store modifier layouts for rendering
+    graph.modifierLayouts = layoutResult.modifiers;
 
     return graph;
   }
@@ -98,6 +101,11 @@ export class BoardGraph {
     } while (current && current !== this.head);
 
     return result;
+  }
+
+  /** Modifier overlays (for rendering, not game tiles). */
+  getModifiers(): ModifierLayout[] {
+    return this.modifierLayouts;
   }
 
   /** The first traversable tile (where players start). */

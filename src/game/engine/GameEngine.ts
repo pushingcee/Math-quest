@@ -1,5 +1,5 @@
 import { GameState, GameConfig, createInitialState } from './GameState';
-import { Player, MathProblem, Difficulty } from '@/types/game';
+import { Player, Difficulty } from '@/types/game';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { GameScreen, MessageType, TileLandingResult, TileType } from '../constants/enums';
 import { BoardSystem } from '../systems/BoardSystem';
@@ -12,6 +12,10 @@ import { ItemSystem } from '../systems/ItemSystem';
 import { ItemType } from '@/types/items';
 import { Language } from '@/i18n/translations';
 import { BoardGraph } from '../board/BoardGraph';
+import { BoardConfigLoader } from '../board/BoardConfigLoader';
+import defaultBoardJson from '../board/boards/default.board.json';
+
+const defaultBoard = BoardConfigLoader.parse(defaultBoardJson);
 
 export type StateChangeListener = (state: GameState) => void;
 
@@ -58,6 +62,23 @@ export class GameEngine {
 
   private notifyListeners() {
     this.listeners.forEach(listener => listener(this.state));
+  }
+
+  /**
+   * Immutably update a single player in the players array and set state.
+   * Optionally merge additional state updates.
+   */
+  private updatePlayer(playerId: number, updatedPlayer: Player, extraState?: Partial<GameState>) {
+    const newPlayers = [...this.state.players];
+    newPlayers[playerId] = updatedPlayer;
+    this.setState({ players: newPlayers, ...extraState });
+  }
+
+  /**
+   * Directly patch state and notify listeners (debug/devtools only).
+   */
+  patchState(updates: Partial<GameState>) {
+    this.setState(updates);
   }
 
   // ===== GAME LIFECYCLE =====
@@ -113,8 +134,9 @@ export class GameEngine {
     // Initialize players with selected avatars and colors
     const players = PlayerSystem.initializePlayersWithAvatars(avatarIndices, colors);
 
-    // Create board
-    const tiles = BoardSystem.createBoard(this.state.config.boardSize, this.state.importedProblems || undefined);
+    // Create board from config
+    const boardConfig = this.state.config.boardConfig ?? defaultBoard;
+    const tiles = BoardSystem.createBoard(boardConfig, this.state.importedProblems || undefined);
 
     // Initialize problem pool
     const { pool, usedIds } = ProblemSystem.initializeProblemPool(this.state.importedProblems || null);
@@ -122,7 +144,7 @@ export class GameEngine {
     // Build board graph (doubly-linked tile structure).
     // Uses a default pixel size — the rendering layer will rebuild
     // at the actual viewport size. This instance is for game logic only.
-    this._boardGraph = BoardGraph.fromLayout(863, tiles);
+    this._boardGraph = BoardGraph.fromLayout(863, tiles, boardConfig);
     this._boardGraph.syncSlotsFromPlayers(players);
 
     this.setState({
@@ -135,50 +157,6 @@ export class GameEngine {
       diceValue: 0,
       problemPool: pool,
       usedProblemIds: usedIds,
-      message: null,
-      bannerMessage: null,
-      mathProblem: null,
-      isRolling: false,
-      movingPlayer: null,
-    });
-  }
-
-  /**
-   * Start a new game (legacy method for backward compatibility)
-   */
-  startGame(
-    playerCount: number,
-    problems?: ImportedProblemsData,
-    config?: Partial<GameConfig>
-  ) {
-    // Initialize players
-    const players = PlayerSystem.initializePlayers(playerCount);
-
-    // Update config
-    const newConfig = { ...this.state.config, ...config };
-
-    // Create board
-    const tiles = BoardSystem.createBoard(newConfig.boardSize, problems);
-
-    // Initialize problem pool
-    const { pool, usedIds } = ProblemSystem.initializeProblemPool(problems || null);
-
-    // Build board graph
-    this._boardGraph = BoardGraph.fromLayout(863, tiles);
-    this._boardGraph.syncSlotsFromPlayers(players);
-
-    this.setState({
-      screen: GameScreen.Playing,
-      players,
-      tiles,
-      currentPlayer: 0,
-      round: 1,
-      movesInRound: 0,
-      diceValue: 0,
-      importedProblems: problems || null,
-      problemPool: pool,
-      usedProblemIds: usedIds,
-      config: newConfig,
       message: null,
       bannerMessage: null,
       mathProblem: null,
@@ -272,12 +250,7 @@ export class GameEngine {
 
     // Consume one use of the item
     const updatedPlayer = ItemSystem.useItem(player, ItemType.ExtraDiceRoll);
-    const newPlayers = [...this.state.players];
-    newPlayers[this.state.currentPlayer] = updatedPlayer;
-
-    // Clear pending item use and update player
-    this.setState({
-      players: newPlayers,
+    this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
       pendingItemUse: null,
       lastRollWasLuckyDice: true,
     });
@@ -319,12 +292,11 @@ export class GameEngine {
     const newPosition = nextTile.index;
 
     // Update pawn slots
-    this._boardGraph.releaseSlot(`tile-${oldPosition}`, playerId);
+    const oldTile = this._boardGraph.getTileByIndex(oldPosition);
+    if (oldTile) this._boardGraph.releaseSlot(oldTile.id, playerId);
     this._boardGraph.claimSlot(nextTile.id, playerId);
 
-    const newPlayers = [...this.state.players];
-    newPlayers[playerId] = { ...player, position: newPosition };
-    this.setState({ players: newPlayers });
+    this.updatePlayer(playerId, { ...player, position: newPosition });
 
     // Detect crossing START: the head of the chain is the first tile
     // after START. If we just landed on it, we've completed a lap.
@@ -350,11 +322,7 @@ export class GameEngine {
     let updatedPlayer = ScoringSystem.applyScoreChange(player, scoreChange);
     updatedPlayer = ItemSystem.awardCoins(updatedPlayer, coinReward);
 
-    const newPlayers = [...this.state.players];
-    newPlayers[playerId] = updatedPlayer;
-
-    this.setState({
-      players: newPlayers,
+    this.updatePlayer(playerId, updatedPlayer, {
       bannerMessage: { text: message, type: MessageType.Success }
     });
   }
@@ -384,15 +352,8 @@ export class GameEngine {
           this._boardGraph
         );
 
-        const newPlayers = [...this.state.players];
-        newPlayers[playerId] = updatedPlayer;
-
-        this.setState({
-          players: newPlayers,
-          message: {
-            text: message,
-            type: MessageType.Error
-          }
+        this.updatePlayer(playerId, updatedPlayer, {
+          message: { text: message, type: MessageType.Error }
         });
       }
       return TileLandingResult.Next;
@@ -407,11 +368,7 @@ export class GameEngine {
           ? ScoringSystem.applyScoreChange(player, tile.onLand.scoreChange)
           : player;
 
-        const newPlayers = [...this.state.players];
-        newPlayers[playerId] = updatedPlayer;
-
-        this.setState({
-          players: newPlayers,
+        this.updatePlayer(playerId, updatedPlayer, {
           bannerMessage: {
             text: applyScore
               ? tile.onLand.message
@@ -498,11 +455,7 @@ export class GameEngine {
     updatedPlayer = PlayerSystem.updatePlayerStreak(updatedPlayer, result.newStreak);
     updatedPlayer = ItemSystem.awardCoins(updatedPlayer, result.coinReward);
 
-    const newPlayers = [...this.state.players];
-    newPlayers[this.state.currentPlayer] = updatedPlayer;
-
-    this.setState({
-      players: newPlayers,
+    this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
       mathProblem: null,
       message: {
         text: result.message,
@@ -535,11 +488,7 @@ export class GameEngine {
     let updatedPlayer = ScoringSystem.applyScoreChange(player, result.scoreChange);
     updatedPlayer = PlayerSystem.updatePlayerStreak(updatedPlayer, 0);
 
-    const newPlayers = [...this.state.players];
-    newPlayers[this.state.currentPlayer] = updatedPlayer;
-
-    this.setState({
-      players: newPlayers,
+    this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
       mathProblem: null,
       message: {
         text: result.message,
@@ -642,10 +591,7 @@ export class GameEngine {
       return false; // Purchase failed
     }
 
-    const newPlayers = [...this.state.players];
-    newPlayers[this.state.currentPlayer] = updatedPlayer;
-
-    this.setState({ players: newPlayers });
+    this.updatePlayer(this.state.currentPlayer, updatedPlayer);
     return true;
   }
 
@@ -676,11 +622,7 @@ export class GameEngine {
     }
 
     const updatedPlayer = ItemSystem.useItem(player, itemType);
-    const newPlayers = [...this.state.players];
-    newPlayers[this.state.currentPlayer] = updatedPlayer;
-
-    this.setState({
-      players: newPlayers,
+    this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
       pendingItemUse: null,
     });
 
@@ -733,26 +675,17 @@ export class GameEngine {
       return;
     }
 
-    // Move player to selected tile
-    const newPlayers = [...this.state.players];
-
     // Safety check: ensure player has the item
     if (!ItemSystem.hasItem(player, ItemType.Teleport)) {
       this.cancelTeleport();
       return;
     }
 
-    newPlayers[currentPlayer] = {
-      ...player,
-      position: selectedTeleportTile,
-    };
+    // Move player and consume the Teleporter item
+    const movedPlayer = { ...player, position: selectedTeleportTile };
+    const updatedPlayer = ItemSystem.useItem(movedPlayer, ItemType.Teleport);
 
-    // Consume the Teleporter item
-    const updatedPlayer = ItemSystem.useItem(newPlayers[currentPlayer], ItemType.Teleport);
-    newPlayers[currentPlayer] = updatedPlayer;
-
-    this.setState({
-      players: newPlayers,
+    this.updatePlayer(currentPlayer, updatedPlayer, {
       teleporterActive: false,
       selectedTeleportTile: null,
       pendingItemUse: null,
