@@ -1,5 +1,5 @@
 import { Player } from '@/types/game';
-import { SpecialTilePosition, TileScoring } from '../constants/enums';
+import { TileScoring } from '../constants/enums';
 import { Language, t } from '@/i18n/translations';
 
 export interface AnswerResult {
@@ -63,26 +63,6 @@ export class ScoringSystem {
         ? t(language, 'ranOutOfTimeWithPenalty', { answer: correctAnswer, points })
         : t(language, 'ranOutOfTime', { answer: correctAnswer })
     };
-  }
-
-  /**
-   * Calculate score for special tiles
-   */
-  static calculateSpecialTileScore(position: number): { scoreChange: number; message: string } | null {
-    switch (position) {
-      case SpecialTilePosition.Start:
-        return {
-          scoreChange: TileScoring[SpecialTilePosition.Start].points,
-          message: TileScoring[SpecialTilePosition.Start].message
-        };
-      case SpecialTilePosition.Penalty:
-        return {
-          scoreChange: TileScoring[SpecialTilePosition.Penalty].points,
-          message: TileScoring[SpecialTilePosition.Penalty].message
-        };
-      default:
-        return null;
-    }
   }
 
   /**

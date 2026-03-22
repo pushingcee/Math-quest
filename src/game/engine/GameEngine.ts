@@ -1,7 +1,7 @@
 import { GameState, GameConfig, createInitialState } from './GameState';
 import { Player, MathProblem, Difficulty } from '@/types/game';
 import { ImportedProblemsData } from '@/types/imported-problems';
-import { GameScreen, MessageType, SpecialTilePosition, TileScoring, TileLandingResult, TileType } from '../constants/enums';
+import { GameScreen, MessageType, TileLandingResult, TileType } from '../constants/enums';
 import { BoardSystem } from '../systems/BoardSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { ProblemSystem } from '../systems/ProblemSystem';
@@ -11,6 +11,7 @@ import { ObstacleSystem } from '../systems/ObstacleSystem';
 import { ItemSystem } from '../systems/ItemSystem';
 import { ItemType } from '@/types/items';
 import { Language } from '@/i18n/translations';
+import { BoardGraph } from '../board/BoardGraph';
 
 export type StateChangeListener = (state: GameState) => void;
 
@@ -18,6 +19,7 @@ export class GameEngine {
   private state: GameState;
   private listeners: Set<StateChangeListener> = new Set();
   private forcedDiceValue: number | null = null;
+  private _boardGraph: BoardGraph | null = null;
 
   constructor(initialState?: Partial<GameState>) {
     this.state = { ...createInitialState(), ...initialState };
@@ -36,6 +38,14 @@ export class GameEngine {
    */
   getState(): Readonly<GameState> {
     return this.state;
+  }
+
+  /**
+   * Get the board graph (doubly-linked tile structure).
+   * Available after the game starts. Returns null during setup.
+   */
+  getBoardGraph(): BoardGraph | null {
+    return this._boardGraph;
   }
 
   /**
@@ -109,6 +119,12 @@ export class GameEngine {
     // Initialize problem pool
     const { pool, usedIds } = ProblemSystem.initializeProblemPool(this.state.importedProblems || null);
 
+    // Build board graph (doubly-linked tile structure).
+    // Uses a default pixel size — the rendering layer will rebuild
+    // at the actual viewport size. This instance is for game logic only.
+    this._boardGraph = BoardGraph.fromLayout(863, tiles);
+    this._boardGraph.syncSlotsFromPlayers(players);
+
     this.setState({
       screen: GameScreen.Playing,
       players,
@@ -147,6 +163,10 @@ export class GameEngine {
     // Initialize problem pool
     const { pool, usedIds } = ProblemSystem.initializeProblemPool(problems || null);
 
+    // Build board graph
+    this._boardGraph = BoardGraph.fromLayout(863, tiles);
+    this._boardGraph.syncSlotsFromPlayers(players);
+
     this.setState({
       screen: GameScreen.Playing,
       players,
@@ -171,6 +191,7 @@ export class GameEngine {
    * Reset game to setup screen
    */
   resetGame() {
+    this._boardGraph = null;
     this.state = createInitialState();
     this.notifyListeners();
   }
@@ -284,26 +305,31 @@ export class GameEngine {
   }
 
   /**
-   * Update player position during movement
+   * Advance a player one tile along the board graph.
+   * Returns true if the player crossed START on this step.
    */
-  movePlayerStep(playerId: number, newPosition: number): boolean {
+  movePlayerStep(playerId: number): boolean {
     const player = this.state.players[playerId];
-    if (!player) return false;
+    if (!player || !this._boardGraph) return false;
 
     const oldPosition = player.position;
-    const updatedPlayer = PlayerSystem.movePlayerToPosition(
-      player,
-      newPosition,
-      this.state.config.boardSize
-    );
+    const nextTile = this._boardGraph.getNextFrom(oldPosition);
+    if (!nextTile) return false;
+
+    const newPosition = nextTile.index;
+
+    // Update pawn slots
+    this._boardGraph.releaseSlot(`tile-${oldPosition}`, playerId);
+    this._boardGraph.claimSlot(nextTile.id, playerId);
 
     const newPlayers = [...this.state.players];
-    newPlayers[playerId] = updatedPlayer;
-
+    newPlayers[playerId] = { ...player, position: newPosition };
     this.setState({ players: newPlayers });
 
-    // Check if passed START
-    return PlayerSystem.didPassStart(oldPosition, newPosition, this.state.config.boardSize);
+    // Detect crossing START: the head of the chain is the first tile
+    // after START. If we just landed on it, we've completed a lap.
+    const head = this._boardGraph.getHead();
+    return head !== null && newPosition === head.index && oldPosition !== head.index;
   }
 
   /**
@@ -339,23 +365,23 @@ export class GameEngine {
    * Handle landing on a tile
    */
   handleTileLanding(position: number, playerId: number): TileLandingResult {
-    const tile = this.state.tiles[position];
+    const tile = this.state.tiles.find(t => t.index === position);
     if (!tile) return TileLandingResult.Next;
 
-    // Handle shop tiles
+    // Shop tile
     if (tile.type === TileType.Shop) {
       this.openShop();
       return TileLandingResult.Special;
     }
 
-    // Handle obstacle tiles
+    // Obstacle tile
     if (tile.type === TileType.Obstacle && tile.obstacleType) {
       const player = this.state.players[playerId];
       if (player) {
         const { player: updatedPlayer, message } = ObstacleSystem.applyObstacleEffect(
           player,
           tile.obstacleType,
-          this.state.config.boardSize
+          this._boardGraph
         );
 
         const newPlayers = [...this.state.players];
@@ -372,13 +398,13 @@ export class GameEngine {
       return TileLandingResult.Next;
     }
 
-    // Handle special tiles
-    const specialScore = ScoringSystem.calculateSpecialTileScore(position);
-    if (specialScore) {
+    // Landing effect (Start +50, Penalty -30, or any custom effect)
+    if (tile.onLand) {
       const player = this.state.players[playerId];
       if (player) {
-        const updatedPlayer = this.state.config.negativePointsEnabled || specialScore.scoreChange > 0
-          ? ScoringSystem.applyScoreChange(player, specialScore.scoreChange)
+        const applyScore = this.state.config.negativePointsEnabled || tile.onLand.scoreChange > 0;
+        const updatedPlayer = applyScore
+          ? ScoringSystem.applyScoreChange(player, tile.onLand.scoreChange)
           : player;
 
         const newPlayers = [...this.state.players];
@@ -387,58 +413,25 @@ export class GameEngine {
         this.setState({
           players: newPlayers,
           bannerMessage: {
-            text: this.state.config.negativePointsEnabled || specialScore.scoreChange > 0
-              ? specialScore.message
-              : TileScoring[SpecialTilePosition.Penalty].messageNoDeduct,
-            type: specialScore.scoreChange > 0 ? MessageType.Success : MessageType.Error
+            text: applyScore
+              ? tile.onLand.message
+              : (tile.onLand.messageNoDeduct ?? tile.onLand.message),
+            type: tile.onLand.scoreChange > 0 ? MessageType.Success : MessageType.Error
           }
         });
       }
       return TileLandingResult.Next;
     }
 
-    // Handle corner bonus/challenge tiles
-    if (position === SpecialTilePosition.Bonus) {
-      // Calculate doubled points based on difficulty
-      const difficulty = TileScoring[SpecialTilePosition.Bonus].difficulty;
-      const basePoints = difficulty * 10 + Math.floor(Math.random() * 20);
-      const bonusPoints = basePoints * 2; // Double the points!
-
-      this.setState({
-        bannerMessage: {
-          text: TileScoring[SpecialTilePosition.Bonus].message,
-          type: MessageType.Success
-        }
-      });
-      this.showMathProblem(difficulty, bonusPoints);
-      return TileLandingResult.Math;
-    }
-
-    if (position === SpecialTilePosition.Challenge) {
-      this.setState({
-        bannerMessage: {
-          text: TileScoring[SpecialTilePosition.Challenge].message,
-          type: MessageType.Success
-        }
-      });
-      this.showMathProblem(
-        TileScoring[SpecialTilePosition.Challenge].difficulty,
-        TileScoring[SpecialTilePosition.Challenge].points
-      );
-      return TileLandingResult.Math;
-    }
-
-    // Regular tile with math problem
+    // Math problem tile
     if (tile.difficulty && tile.points && tile.question !== undefined && tile.answer !== undefined) {
-      // Tiles under the BONUS corner (tile 10, cols 1-2, rows 10-11) get x2 points
-      const bonusTiles = [8, 9, 11];
-      const pointsMultiplier = bonusTiles.includes(position) ? 2 : 1;
-      const finalPoints = tile.points * pointsMultiplier;
+      const multiplier = tile.pointsMultiplier ?? 1;
+      const finalPoints = tile.points * multiplier;
 
-      if (pointsMultiplier > 1) {
+      if (multiplier > 1) {
         this.setState({
           bannerMessage: {
-            text: TileScoring[SpecialTilePosition.Bonus].message,
+            text: 'BONUS! Your next correct answer worth double!',
             type: MessageType.Success
           }
         });

@@ -19,26 +19,27 @@ export interface MathProblem {
   points: number;
 }
 
-export interface GameState {
-  players: Player[];
-  currentPlayer: number;
-  round: number;
-  maxRounds: number;
-  boardSize: number;
-  diceValue: number;
-  mathProblem: MathProblem | null;
-  movesInRound: number;
-}
-
 export { GameScreen, Difficulty, TileType };
+
+export interface TileLandingEffect {
+  scoreChange: number;
+  message: string;
+  messageNoDeduct?: string;
+}
 
 export interface TileData {
   index: number;
-  difficulty?: Difficulty;
-  points?: number;
   type: TileType;
   label?: string;
+  // Math problem (Regular tiles)
+  difficulty?: Difficulty;
+  points?: number;
   question?: string;
   answer?: number;
+  // Obstacle
   obstacleType?: ObstacleType;
+  // Landing effect (e.g. Start +50pts, Penalty -30pts)
+  onLand?: TileLandingEffect;
+  // Points multiplier for math problems on this tile (default 1)
+  pointsMultiplier?: number;
 }

@@ -49,26 +49,6 @@ export class PlayerSystem {
   }
 
   /**
-   * Move player to new position, skipping corner tiles
-   * Corner tiles (0=Start, 10=Bonus, 20=Challenge, 30=Penalty) are decorative overlays
-   * Players skip over these tiles and land on the next available regular tile
-   */
-  static movePlayerToPosition(player: Player, newPosition: number, boardSize: number): Player {
-    // Corner tiles (0, 10, 20, 30) are decorative overlays — skip them.
-    const skipTiles = [0, 10, 20, 30];
-    let finalPosition = newPosition % boardSize;
-
-    while (skipTiles.includes(finalPosition)) {
-      finalPosition = (finalPosition + 1) % boardSize;
-    }
-
-    return {
-      ...player,
-      position: finalPosition
-    };
-  }
-
-  /**
    * Update player score
    */
   static updatePlayerScore(player: Player, scoreChange: number): Player {
@@ -96,13 +76,6 @@ export class PlayerSystem {
       ...player,
       streak: 0
     };
-  }
-
-  /**
-   * Check if player passed START (position wrapped around)
-   */
-  static didPassStart(oldPosition: number, newPosition: number, boardSize: number): boolean {
-    return newPosition < oldPosition;
   }
 
   /**

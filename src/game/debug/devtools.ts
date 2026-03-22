@@ -56,10 +56,10 @@ export class DevTools {
 
     // Trigger tile landing logic (shop, obstacle, math problem, etc.)
     setTimeout(() => {
-      const freshState = this.engine.getState();
-      const cornerTiles = [0, 10, 20, 30];
-
-      if (!cornerTiles.includes(tileIndex)) {
+      const graph = this.engine.getBoardGraph();
+      const tile = graph?.getTileByIndex(tileIndex);
+      // Only handle landing on traversable tiles (linked in the graph)
+      if (tile?.next) {
         console.log(`📍 Handling tile landing for tile ${tileIndex}...`);
         this.engine.handleTileLanding(tileIndex, playerId);
       }

@@ -197,19 +197,16 @@ export default function MathQuest() {
       return;
     }
 
-    const oldPosition = player.position;
-
     engine.startMovingPlayer(playerId);
     engine.setRolling(false);
 
-    // Animate movement step by step — PixiBoard reacts to position changes
+    // Animate movement step by step — engine follows linked-list links
+    let passedStart = false;
     for (let step = 1; step <= steps; step++) {
       await new Promise((resolve) => setTimeout(resolve, 400));
 
-      const currentState = engine.getState();
-      const currentPosition = currentState.players[playerId]?.position ?? oldPosition;
-      const newPosition = (currentPosition + 1) % currentState.config.boardSize;
-      engine.movePlayerStep(playerId, newPosition);
+      const crossed = engine.movePlayerStep(playerId);
+      if (crossed) passedStart = true;
     }
 
     // Wait for the last step's walk animation to finish before clearing isMoving
@@ -217,32 +214,23 @@ export default function MathQuest() {
 
     engine.completePlayerMovement();
 
-    const finalState = engine.getState();
-    const actualPosition = finalState.players[playerId]?.position ?? 0;
-    const calculatedPosition = (oldPosition + steps) % finalState.config.boardSize;
-
-    // Check if passed START
-    if (calculatedPosition < oldPosition) {
+    if (passedStart) {
       engine.applyPassStartBonus(playerId);
     }
 
-    // Handle tile landing — corner tiles + tile 39 (under START) are skipped
+    const finalState = engine.getState();
+    const actualPosition = finalState.players[playerId]?.position ?? 0;
+
+    // Handle tile landing
     setTimeout(() => {
-      const cornerTiles = [0, 10, 20, 30];
-      if (!cornerTiles.includes(actualPosition)) {
-        const result = engine.handleTileLanding(actualPosition, playerId);
-        if (result === TileLandingResult.Next) {
-          const state = engine.getState();
-          if (state.message !== null) {
-            setTimeout(() => {
-              engine.nextTurn();
-            }, 2600);
-          } else {
-            engine.nextTurn();
-          }
+      const result = engine.handleTileLanding(actualPosition, playerId);
+      if (result === TileLandingResult.Next) {
+        const state = engine.getState();
+        // If a message is shown (e.g. obstacle), the MessageModal's onClose
+        // already calls nextTurn — don't double-advance here.
+        if (state.message === null) {
+          engine.nextTurn();
         }
-      } else {
-        engine.nextTurn();
       }
     }, 500);
   }, [engine]);

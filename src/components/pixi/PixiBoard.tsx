@@ -4,7 +4,8 @@ import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { Application, extend, useApplication } from '@pixi/react';
 import { Container, Graphics as PixiGraphics, Sprite as PixiSprite, Text as PixiText, Texture, Assets } from 'pixi.js';
 import { TileData, Player } from '@/types/game';
-import { computeBoardLayout, computeStackOffset, TILE_GAP } from '@/game/board/BoardLayout';
+import { TILE_GAP } from '@/game/board/BoardLayout';
+import { BoardGraph } from '@/game/board/BoardGraph';
 import { useCamera } from './useCamera';
 import PixiTile from './PixiTile';
 import PixiPlayerToken from './PixiPlayerToken';
@@ -107,21 +108,39 @@ function PixiBoardContent({
   const [bgTexture, setBgTexture] = useState<Texture | null>(null);
   useEffect(() => { loadBgTexture().then(setBgTexture); }, []);
 
-  // Layout is always computed at the fixed world size
+  // Board graph: doubly-linked tile structure with layout + pawn slots
   const innerSize = BOARD_WORLD_SIZE - BOARD_PADDING * 2;
-  const layout = useMemo(() => computeBoardLayout(innerSize), [innerSize]);
+  const boardGraph = useMemo(
+    () => BoardGraph.fromLayout(innerSize, tiles),
+    [innerSize, tiles]
+  );
+
+  // Sync pawn slots whenever players move
+  useMemo(() => {
+    boardGraph.syncSlotsFromPlayers(players);
+  }, [boardGraph, players]);
+
+  // Derived layout values for rendering (shadows, gap bg, background image)
+  const layout = useMemo(() => {
+    const allTiles = boardGraph.getAllTiles();
+    const cellSize = innerSize / 11;
+    return {
+      tiles: allTiles.map((t) => t.layout),
+      cellSize,
+    };
+  }, [boardGraph, innerSize]);
 
   // Find the active player's world-space position for the camera
   const activePlayer = players[currentPlayer];
   const cameraTarget = useMemo(() => {
     if (!activePlayer) return null;
-    const tileLayout = layout.tiles[activePlayer.position];
-    if (!tileLayout) return null;
+    const tileNode = boardGraph.getTileByIndex(activePlayer.position);
+    if (!tileNode) return null;
     return {
-      x: tileLayout.centerX + BOARD_PADDING,
-      y: tileLayout.centerY + BOARD_PADDING,
+      x: tileNode.layout.centerX + BOARD_PADDING,
+      y: tileNode.layout.centerY + BOARD_PADDING,
     };
-  }, [activePlayer?.position, layout]);
+  }, [activePlayer?.position, boardGraph]);
 
   // Drop shadows — single Graphics layer, zero GPU filter cost
   const drawTileShadows = useCallback(
@@ -184,13 +203,13 @@ function PixiBoardContent({
       {/* Tiles layer */}
       <pixiContainer x={BOARD_PADDING} y={BOARD_PADDING} sortableChildren>
         {tiles.map((tile) => {
-          const tileLayout = layout.tiles[tile.index];
-          if (!tileLayout) return null;
+          const tileNode = boardGraph.getTileByIndex(tile.index);
+          if (!tileNode) return null;
           return (
             <PixiTile
               key={tile.index}
               tile={tile}
-              layout={tileLayout}
+              layout={tileNode.layout}
               teleporterMode={teleporterMode}
               teleporterSelected={selectedTeleportTile === tile.index}
               onTeleportClick={onTileTeleportClick}
@@ -202,15 +221,15 @@ function PixiBoardContent({
       {/* Players layer */}
       <pixiContainer x={BOARD_PADDING} y={BOARD_PADDING} sortableChildren>
         {players.map((player) => {
-          const tileLayout = layout.tiles[player.position];
-          if (!tileLayout) return null;
-          const offset = computeStackOffset(player.id, player.position, players);
+          const tileNode = boardGraph.getTileByIndex(player.position);
+          if (!tileNode) return null;
+          const slotOffset = boardGraph.getPlayerSlotOffset(player.position, player.id);
           return (
             <PixiPlayerToken
               key={player.id}
               player={player}
-              tileLayout={tileLayout}
-              stackOffset={offset}
+              tileLayout={tileNode.layout}
+              slotOffset={slotOffset}
               isMoving={movingPlayer === player.id}
               isActive={player.id === currentPlayer}
               teleporterMode={teleporterMode}

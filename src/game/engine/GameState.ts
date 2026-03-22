@@ -111,7 +111,7 @@ export const createInitialState = (): GameState => ({
     autoCloseModal: true,
     displayProblemsInTiles: true,
     maxRounds: 10,
-    boardSize: 39,
+    boardSize: 40,
   },
   message: null,
   bannerMessage: null,

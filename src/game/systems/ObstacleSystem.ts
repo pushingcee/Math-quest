@@ -2,24 +2,32 @@ import { Player } from '@/types/game';
 import { ObstacleType } from '../constants/enums';
 import { ItemSystem } from './ItemSystem';
 import { ItemType } from '@/types/items';
+import { BoardGraph } from '../board/BoardGraph';
 
 export interface ObstacleResult {
   scoreChange: number;
-  positionChange: number;
+  newPosition: number;
   message: string;
 }
 
 export class ObstacleSystem {
   /**
-   * Handle Slip Tile - Move player back 3 spaces
+   * Handle Slip Tile - Walk player back 3 spaces along the board graph
    */
-  static handleSlip(currentPosition: number, boardSize: number): ObstacleResult {
-    const newPosition = Math.max(0, currentPosition - 3);
-    const positionChange = newPosition - currentPosition; // Negative value
+  static handleSlip(currentPosition: number, graph: BoardGraph | null): ObstacleResult {
+    let newPosition = currentPosition;
+
+    if (graph) {
+      const dest = graph.walkBack(currentPosition, 3);
+      if (dest) newPosition = dest.index;
+    } else {
+      // Fallback for when graph is not available
+      newPosition = Math.max(0, currentPosition - 3);
+    }
 
     return {
       scoreChange: 0,
-      positionChange,
+      newPosition,
       message: '❄️ You hit an ice tile! Slipped back 3 spaces!'
     };
   }
@@ -27,12 +35,11 @@ export class ObstacleSystem {
   /**
    * Handle Trap Tile - Deduct 15% of current score
    */
-  static handleTrap(currentScore: number): ObstacleResult {
+  static handleTrap(currentPosition: number, currentScore: number): ObstacleResult {
     const penalty = Math.floor(currentScore * 0.15);
-
     return {
       scoreChange: -penalty,
-      positionChange: 0,
+      newPosition: currentPosition,
       message: `⚠️ You hit a trap! Lost 15% of your points (-${penalty} points)!`
     };
   }
@@ -43,7 +50,7 @@ export class ObstacleSystem {
   static applyObstacleEffect(
     player: Player,
     obstacleType: ObstacleType,
-    boardSize: number
+    graph: BoardGraph | null
   ): { player: Player; message: string } {
     // Check if player has a Shield item
     const hasShield = ItemSystem.hasItem(player, ItemType.Shield);
@@ -60,22 +67,22 @@ export class ObstacleSystem {
     }
 
     if (obstacleType === ObstacleType.Slip) {
-      const result = this.handleSlip(player.position, boardSize);
+      const result = this.handleSlip(player.position, graph);
       return {
         player: {
           ...player,
-          position: Math.max(0, player.position + result.positionChange),
-          streak: 0 // Reset streak on obstacle
+          position: result.newPosition,
+          streak: 0
         },
         message: result.message
       };
     } else if (obstacleType === ObstacleType.Trap) {
-      const result = this.handleTrap(player.score);
+      const result = this.handleTrap(player.position, player.score);
       return {
         player: {
           ...player,
           score: Math.max(0, player.score + result.scoreChange),
-          streak: 0 // Reset streak on obstacle
+          streak: 0
         },
         message: result.message
       };

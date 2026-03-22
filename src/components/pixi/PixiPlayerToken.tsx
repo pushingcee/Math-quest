@@ -22,7 +22,7 @@ extend({ Container, Graphics: PixiGraphics, Sprite: PixiSprite });
 interface PixiPlayerTokenProps {
   player: Player;
   tileLayout: TileLayout;
-  stackOffset: { x: number; y: number };
+  slotOffset: { x: number; y: number };
   isMoving: boolean;
   isActive: boolean;
   teleporterMode?: boolean;
@@ -33,7 +33,7 @@ const TOKEN_SIZE = 64;
 export default memo(function PixiPlayerToken({
   player,
   tileLayout,
-  stackOffset,
+  slotOffset,
   isMoving,
   isActive,
   teleporterMode = false,
@@ -49,9 +49,9 @@ export default memo(function PixiPlayerToken({
   const isAnimatingRef = useRef(false);
   const initializedRef = useRef(false);
 
-  // Target position
-  const targetX = tileLayout.centerX - TOKEN_SIZE / 2 + stackOffset.x;
-  const targetY = tileLayout.centerY - TOKEN_SIZE / 2 - stackOffset.y - 15;
+  // Target position — slot offset is relative to tile center, -15 lifts the pawn visually
+  const targetX = tileLayout.centerX - TOKEN_SIZE / 2 + slotOffset.x;
+  const targetY = tileLayout.centerY - TOKEN_SIZE / 2 + slotOffset.y - 15;
 
   // Load texture
   useEffect(() => {

@@ -1,6 +1,6 @@
 /**
  * Pure math module: computes tile pixel positions from a board pixel size.
- * No PixiJS dependency — just geometry matching the 11×11 CSS grid layout.
+ * No PixiJS dependency — just geometry matching the 13×13 grid layout.
  */
 
 export interface TileLayout {
@@ -21,39 +21,34 @@ export interface BoardLayoutResult {
 }
 
 /**
- * Compute pixel positions for all 40 board tiles.
+ * Compute pixel positions for all 40 board tiles (indices 0-39).
  *
- * The board is an 11×11 grid. Each cell is `cellSize = boardPixelSize / 11`.
+ * The board is a 13×13 grid. Each cell is `cellSize = boardPixelSize / 13`.
  * Corner tiles (indices 0, 10, 20, 30) span 2×2 cells.
  * Regular tiles span 1×1 cell.
  *
- * Grid positions (1-based, matching CSS grid-column / grid-row):
- *   Tile 0  (corner): cols 10-11, rows 10-11 (bottom-right)
- *   Tiles 1-9 (bottom row): row 11, col = 10 - index  (right→left)
- *   Tile 10 (corner): cols 1-2, rows 10-11 (bottom-left)
- *   Tiles 11-19 (left col): col 1, row = 11 - (index - 10)  (bottom→top)
- *   Tile 20 (corner): cols 1-2, rows 1-2 (top-left)
- *   Tiles 21-29 (top row): row 1, col = index - 20 + 1  — but corners occupy cols 1-2,
- *       so tile 21 starts at col 3. Actually from CSS: col = index - 20 + 1.
- *       Wait — tile 21: col = 21 - 20 + 1 = 2. But corner 20 occupies cols 1-2.
- *       Let me re-check the Board.tsx code:
- *         index < 30 → col = index - 20 + 1, row = 1
- *         tile 21 → col=2, row=1 — this overlaps with corner 20 (cols 1-2, rows 1-2)!
- *       Actually the CSS grid handles overlapping by z-index. The corner has z-20.
- *       For pixel layout, tile 21 at col=2 is fine — it just sits behind the corner.
- *       In our PixiJS board, we render corners on top, so the overlap is visual only.
+ * Corners occupy the four grid corners (2×2 each), leaving 9 non-overlapping
+ * positions per side (cols/rows 3-11) for regular tiles:
  *
- *   Tiles 31-38 (right col): col 11, row = index - 30 + 1
+ *   Corner 0  (START):     cols 12-13, rows 12-13 (bottom-right)
+ *   Corner 10 (BONUS):     cols 1-2,   rows 12-13 (bottom-left)
+ *   Corner 20 (CHALLENGE): cols 1-2,   rows 1-2   (top-left)
+ *   Corner 30 (PENALTY):   cols 12-13, rows 1-2   (top-right)
+ *
+ *   Bottom row (tiles 1-9):   row 13, cols 11→3  (right→left)
+ *   Left column (tiles 11-19): col 1,  rows 11→3 (bottom→top)
+ *   Top row (tiles 21-29):    row 1,  cols 3→11  (left→right)
+ *   Right column (tiles 31-39): col 13, rows 3→11 (top→bottom)
  */
 /** Gap in pixels between adjacent tiles (visible on all sides) */
 export const TILE_GAP = 5;
 
 export function computeBoardLayout(boardPixelSize: number): BoardLayoutResult {
-  const cellSize = boardPixelSize / 11;
+  const cellSize = boardPixelSize / 13;
   const tiles: TileLayout[] = [];
   const halfGap = TILE_GAP / 2;
 
-  for (let index = 0; index < 39; index++) {
+  for (let index = 0; index < 40; index++) {
     const pos = getTileGridPosition(index);
     const isCorner = [0, 10, 20, 30].includes(index);
     const spanCells = isCorner ? 2 : 1;
@@ -84,42 +79,24 @@ export function computeBoardLayout(boardPixelSize: number): BoardLayoutResult {
 }
 
 function getTileGridPosition(index: number): { col: number; row: number } {
-  // Corner tiles
-  if (index === 0)  return { col: 10, row: 10 };
-  if (index === 10) return { col: 1,  row: 10 };
+  // Corner tiles (2×2, anchored at their top-left cell)
+  if (index === 0)  return { col: 12, row: 12 };
+  if (index === 10) return { col: 1,  row: 12 };
   if (index === 20) return { col: 1,  row: 1  };
-  if (index === 30) return { col: 10, row: 1  };
+  if (index === 30) return { col: 12, row: 1  };
 
-  // Bottom row (tiles 1-9): right to left
+  // Bottom row (tiles 1-9): right to left, row 13, cols 11→3
   if (index < 10) {
-    return { col: 10 - index, row: 11 };
+    return { col: 12 - index, row: 13 };
   }
-  // Left column (tiles 11-19): bottom to top
+  // Left column (tiles 11-19): bottom to top, col 1, rows 11→3
   if (index < 20) {
-    return { col: 1, row: 11 - (index - 10) };
+    return { col: 1, row: 22 - index };
   }
-  // Top row (tiles 21-29): left to right
+  // Top row (tiles 21-29): left to right, row 1, cols 3→11
   if (index < 30) {
-    return { col: index - 20 + 1, row: 1 };
+    return { col: index - 18, row: 1 };
   }
-  // Right column (tiles 31-39): top to bottom
-  return { col: 11, row: index - 30 + 1 };
-}
-
-/**
- * Compute stacking offsets when multiple players share the same tile.
- */
-export function computeStackOffset(
-  playerId: number,
-  playerPosition: number,
-  allPlayers: { id: number; position: number }[]
-): { x: number; y: number } {
-  const playersOnSameTile = allPlayers.filter(
-    (p) => p.id < playerId && p.position === playerPosition
-  ).length;
-
-  return {
-    x: playersOnSameTile * 20 - 10,
-    y: playersOnSameTile * 20,
-  };
+  // Right column (tiles 31-39): top to bottom, col 13, rows 3→11
+  return { col: 13, row: index - 28 };
 }
