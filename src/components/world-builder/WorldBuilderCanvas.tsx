@@ -551,6 +551,7 @@ function WorldBuilderCanvasContent({
       {/* Layer 5: drag ghost */}
       <pixiGraphics
         eventMode="none"
+        draw={() => {}}
         ref={(g) => {
           if (g) ghostGfxRef.current = g as unknown as PixiGraphics;
         }}
@@ -559,6 +560,7 @@ function WorldBuilderCanvasContent({
       {/* Layer 6: marquee rectangle (topmost) */}
       <pixiGraphics
         eventMode="none"
+        draw={() => {}}
         ref={(g) => {
           if (g) rectGfxRef.current = g as unknown as PixiGraphics;
         }}
