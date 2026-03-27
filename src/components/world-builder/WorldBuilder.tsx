@@ -14,9 +14,12 @@ export default function WorldBuilder() {
     state,
     placeTile,
     removeTile,
+    removeSelectedTiles,
     moveTile,
+    moveSelectedTiles,
     updateTile,
     selectTile,
+    selectTiles,
     setActivePalette,
     enterConnectMode,
     resolveConnection,
@@ -29,25 +32,27 @@ export default function WorldBuilder() {
     loadDefault,
   } = useWorldBuilderState();
 
-  const selectedTile = state.tiles.find((t) => t.id === state.selectedTileId) ?? null;
+  const { selectedTileIds } = state;
+  const singleSelectedTile = selectedTileIds.length === 1
+    ? state.tiles.find((t) => t.id === selectedTileIds[0]) ?? null
+    : null;
 
-  // Keyboard: Escape cancels connect mode or deselects
+  // Keyboard: Escape cancels connect mode or deselects; Delete removes selected
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         if (state.connectMode) cancelConnectMode();
         else selectTile(null);
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedTileId) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedTileIds.length > 0) {
         const target = e.target as HTMLElement;
-        // Don't delete while typing in an input
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-        removeTile(state.selectedTileId);
+        removeSelectedTiles();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [state.connectMode, state.selectedTileId, cancelConnectMode, selectTile, removeTile]);
+  }, [state.connectMode, selectedTileIds, cancelConnectMode, selectTile, removeSelectedTiles]);
 
   const handleExport = useCallback(() => {
     const json = exportJSON();
@@ -100,7 +105,12 @@ export default function WorldBuilder() {
               Connect mode — click target tile
             </span>
           )}
-          <span className="hidden sm:block">Esc to deselect • Delete to remove</span>
+          {selectedTileIds.length > 1 && (
+            <span className="px-2 py-0.5 rounded bg-sky-700 text-sky-100 font-semibold">
+              {selectedTileIds.length} selected
+            </span>
+          )}
+          <span className="hidden sm:block">Ctrl+click add • Shift+drag marquee • Esc deselect • Del remove</span>
         </div>
       </header>
 
@@ -124,31 +134,53 @@ export default function WorldBuilder() {
             editorState={state}
             onPlaceTile={placeTile}
             onSelectTile={selectTile}
+            onSelectTiles={selectTiles}
             onMoveTile={moveTile}
+            onMoveSelectedTiles={moveSelectedTiles}
             onResolveConnection={resolveConnection}
             onCancelConnectMode={cancelConnectMode}
           />
         </main>
 
-        {/* Right panel — properties */}
+        {/* Right panel — properties / multi-select */}
         <aside
           className={`
             w-52 flex-shrink-0 bg-slate-800 border-l border-slate-700 p-3 overflow-y-auto
             transition-opacity duration-150
-            ${selectedTile ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+            ${selectedTileIds.length > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}
           `}
         >
-          {selectedTile && (
+          {singleSelectedTile ? (
             <TilePropertiesPanel
-              tile={selectedTile}
+              tile={singleSelectedTile}
               allTileIds={state.tiles.map((t) => t.id)}
               isConnectMode={state.connectMode}
-              onUpdate={(patch) => updateTile(selectedTile.id, patch)}
-              onDelete={() => removeTile(selectedTile.id)}
+              onUpdate={(patch) => updateTile(singleSelectedTile.id, patch)}
+              onDelete={() => removeTile(singleSelectedTile.id)}
               onEnterConnectMode={enterConnectMode}
-              onClearConnection={() => clearConnection(selectedTile.id)}
+              onClearConnection={() => clearConnection(singleSelectedTile.id)}
             />
-          )}
+          ) : selectedTileIds.length > 1 ? (
+            <div className="flex flex-col gap-3 text-sm text-slate-200">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Multi-select
+              </p>
+              <p className="text-slate-300">{selectedTileIds.length} tiles selected</p>
+              <p className="text-xs text-slate-500">Ctrl+click to toggle • Shift+drag marquee</p>
+              <button
+                onClick={removeSelectedTiles}
+                className="w-full px-3 py-1.5 rounded bg-red-800 hover:bg-red-700 text-white text-xs font-semibold transition-colors"
+              >
+                Delete All ({selectedTileIds.length})
+              </button>
+              <button
+                onClick={() => selectTile(null)}
+                className="w-full px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold transition-colors"
+              >
+                Deselect All
+              </button>
+            </div>
+          ) : null}
         </aside>
       </div>
     </div>

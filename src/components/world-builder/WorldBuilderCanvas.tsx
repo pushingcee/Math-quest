@@ -8,7 +8,7 @@ import {
   Text as PixiText,
   FederatedPointerEvent,
 } from 'pixi.js';
-import { EditorState, EditorTile, DragState } from './worldBuilderTypes';
+import { EditorState, EditorTile, DragState, GroupOffset } from './worldBuilderTypes';
 import { TILE_GAP } from '@/game/board/BoardLayout';
 
 extend({ Container, Graphics: PixiGraphics, Text: PixiText });
@@ -36,6 +36,7 @@ const C = {
   arrowNormal:    0xffffff,
   arrowSelected:  0x38bdf8,
   ghost:          0x60a5fa, // blue-400
+  marquee:        0x38bdf8, // sky-400
 };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -100,11 +101,20 @@ function drawArrow(
 
 // ── inner canvas component ────────────────────────────────────────────────────
 
+interface RectSelectState {
+  startX: number;   // local PixiJS coords
+  startY: number;
+  currentX: number;
+  currentY: number;
+}
+
 interface CanvasContentProps {
   editorState: EditorState;
   onPlaceTile: (row: number, col: number) => void;
-  onSelectTile: (id: string | null) => void;
+  onSelectTile: (id: string | null, additive?: boolean) => void;
+  onSelectTiles: (ids: string[]) => void;
   onMoveTile: (id: string, row: number, col: number) => void;
+  onMoveSelectedTiles: (anchorId: string, newRow: number, newCol: number, offsets: GroupOffset[]) => void;
   onResolveConnection: (id: string) => void;
   onCancelConnectMode: () => void;
   viewportSize: number;
@@ -114,15 +124,27 @@ function WorldBuilderCanvasContent({
   editorState,
   onPlaceTile,
   onSelectTile,
+  onSelectTiles,
   onMoveTile,
+  onMoveSelectedTiles,
   onResolveConnection,
   onCancelConnectMode,
   viewportSize,
 }: CanvasContentProps) {
-  const { tiles, selectedTileId, connectMode, activePalette, gridCols, gridRows } = editorState;
+  const { tiles, selectedTileIds, connectMode, activePalette, gridCols, gridRows } = editorState;
+
+  const selectedSet = useMemo(() => new Set(selectedTileIds), [selectedTileIds]);
+
+  // Keep a ref to the latest editor state so PixiJS event handlers
+  // (which @pixi/react may not re-attach on every render) always
+  // read fresh values instead of stale closure captures.
+  const stateRef = useRef(editorState);
+  stateRef.current = editorState;
 
   const dragRef = useRef<DragState | null>(null);
+  const rectSelectRef = useRef<RectSelectState | null>(null);
   const ghostGfxRef = useRef<PixiGraphics | null>(null);
+  const rectGfxRef = useRef<PixiGraphics | null>(null);
   const ghostContainerRef = useRef<Container | null>(null);
 
   const { map: layoutMap, cellSize } = useMemo(
@@ -164,18 +186,19 @@ function WorldBuilderCanvasContent({
     (g: PixiGraphics, localX: number, localY: number) => {
       g.clear();
       if (!dragRef.current?.isDragging) return;
-      const tileId = dragRef.current.tileId;
-      const tile = tiles.find((t) => t.id === tileId);
-      if (!tile) return;
       const halfGap = TILE_GAP / 2;
-      const size = cellSize * tile.span - TILE_GAP;
       const snapCol = Math.floor(localX / cellSize);
       const snapRow = Math.floor(localY / cellSize);
-      const gx = snapCol * cellSize + halfGap;
-      const gy = snapRow * cellSize + halfGap;
-      g.rect(gx, gy, size, size)
-        .fill({ color: C.ghost, alpha: 0.55 })
-        .stroke({ color: C.ghost, width: 2 });
+      for (const off of dragRef.current.groupOffsets) {
+        const tile = tiles.find((t) => t.id === off.tileId);
+        if (!tile) continue;
+        const size = cellSize * tile.span - TILE_GAP;
+        const gx = (snapCol + off.dCol) * cellSize + halfGap;
+        const gy = (snapRow + off.dRow) * cellSize + halfGap;
+        g.rect(gx, gy, size, size)
+          .fill({ color: C.ghost, alpha: 0.55 })
+          .stroke({ color: C.ghost, width: 2 });
+      }
     },
     [tiles, cellSize],
   );
@@ -184,8 +207,29 @@ function WorldBuilderCanvasContent({
 
   const handleWorldPointerMove = useCallback(
     (e: FederatedPointerEvent) => {
-      if (!dragRef.current) return;
       const local = e.getLocalPosition(e.currentTarget as Container);
+
+      // Marquee selection drag
+      if (rectSelectRef.current) {
+        rectSelectRef.current.currentX = local.x;
+        rectSelectRef.current.currentY = local.y;
+        if (rectGfxRef.current) {
+          const rs = rectSelectRef.current;
+          const rx = Math.min(rs.startX, rs.currentX);
+          const ry = Math.min(rs.startY, rs.currentY);
+          const rw = Math.abs(rs.currentX - rs.startX);
+          const rh = Math.abs(rs.currentY - rs.startY);
+          rectGfxRef.current.clear();
+          rectGfxRef.current
+            .rect(rx, ry, rw, rh)
+            .fill({ color: C.marquee, alpha: 0.12 })
+            .stroke({ color: C.marquee, width: 1.5, alpha: 0.7 });
+        }
+        return;
+      }
+
+      // Tile drag
+      if (!dragRef.current) return;
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
       if (!dragRef.current.isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
@@ -200,22 +244,50 @@ function WorldBuilderCanvasContent({
 
   const handleWorldPointerUp = useCallback(
     (e: FederatedPointerEvent) => {
+      // Marquee selection release
+      if (rectSelectRef.current) {
+        const rs = rectSelectRef.current;
+        rectSelectRef.current = null;
+        if (rectGfxRef.current) rectGfxRef.current.clear();
+
+        // Find all tiles whose layout overlaps the marquee rectangle
+        const rx1 = Math.min(rs.startX, rs.currentX);
+        const ry1 = Math.min(rs.startY, rs.currentY);
+        const rx2 = Math.max(rs.startX, rs.currentX);
+        const ry2 = Math.max(rs.startY, rs.currentY);
+        const { tiles: allTiles } = stateRef.current;
+        const hits: string[] = [];
+        for (const t of allTiles) {
+          const lo = layoutMap.get(t.id);
+          if (!lo) continue;
+          // AABB overlap test
+          if (lo.x < rx2 && lo.x + lo.w > rx1 && lo.y < ry2 && lo.y + lo.h > ry1) {
+            hits.push(t.id);
+          }
+        }
+        onSelectTiles(hits);
+        return;
+      }
+
+      // Tile drag release
       if (!dragRef.current) return;
       const drag = dragRef.current;
       dragRef.current = null;
 
-      // Clear ghost
       if (ghostGfxRef.current) ghostGfxRef.current.clear();
 
       const local = e.getLocalPosition(e.currentTarget as Container);
       const { row, col } = localToGrid(local.x, local.y);
 
       if (drag.isDragging) {
-        onMoveTile(drag.tileId, row, col);
+        if (drag.groupOffsets.length > 1) {
+          onMoveSelectedTiles(drag.tileId, row, col, drag.groupOffsets);
+        } else {
+          onMoveTile(drag.tileId, row, col);
+        }
       }
-      // Click (no drag) is handled in the tile's own pointerup
     },
-    [localToGrid, onMoveTile],
+    [localToGrid, layoutMap, onMoveTile, onMoveSelectedTiles, onSelectTiles],
   );
 
   // ── pointer handlers per tile ─────────────────────────────────────────────
@@ -223,11 +295,27 @@ function WorldBuilderCanvasContent({
   const handleTilePointerDown = useCallback(
     (e: FederatedPointerEvent, tileId: string) => {
       e.stopPropagation();
+      const { selectedTileIds: sel, tiles: allTiles } = stateRef.current;
+      const selected = new Set(sel);
+      const anchor = allTiles.find((t) => t.id === tileId);
+      if (!anchor) return;
+
+      // Build group offsets: if anchor is part of selection, move the whole group
+      let groupOffsets: GroupOffset[];
+      if (selected.has(tileId) && selected.size > 1) {
+        groupOffsets = allTiles
+          .filter((t) => selected.has(t.id))
+          .map((t) => ({ tileId: t.id, dRow: t.row - anchor.row, dCol: t.col - anchor.col }));
+      } else {
+        groupOffsets = [{ tileId, dRow: 0, dCol: 0 }];
+      }
+
       dragRef.current = {
         tileId,
         startX: e.clientX,
         startY: e.clientY,
         isDragging: false,
+        groupOffsets,
       };
     },
     [],
@@ -241,15 +329,19 @@ function WorldBuilderCanvasContent({
       if (ghostGfxRef.current) ghostGfxRef.current.clear();
 
       if (!wasDragging) {
-        // Tap = select or connect
-        if (connectMode) {
+        const { connectMode: cm, selectedTileIds: sel } = stateRef.current;
+        if (cm) {
           onResolveConnection(tileId);
+        } else if (e.ctrlKey || e.metaKey) {
+          onSelectTile(tileId, true);
         } else {
-          onSelectTile(tileId === selectedTileId ? null : tileId);
+          // Toggle off if it's the only selected tile
+          const isOnlySelected = sel.length === 1 && sel[0] === tileId;
+          onSelectTile(isOnlySelected ? null : tileId);
         }
       }
     },
-    [connectMode, selectedTileId, onResolveConnection, onSelectTile],
+    [onResolveConnection, onSelectTile],
   );
 
   // Click on empty canvas background
@@ -257,19 +349,32 @@ function WorldBuilderCanvasContent({
     (e: FederatedPointerEvent) => {
       // Only fires if event not stopped by a tile
       const local = e.getLocalPosition(e.currentTarget as Container);
+
+      // Shift+drag starts marquee rectangle selection
+      if (e.shiftKey) {
+        rectSelectRef.current = {
+          startX: local.x,
+          startY: local.y,
+          currentX: local.x,
+          currentY: local.y,
+        };
+        return;
+      }
+
       const { row, col } = localToGrid(local.x, local.y);
       const hit = tileAtGrid(row, col);
       if (!hit) {
-        if (connectMode) {
+        const { connectMode: cm, activePalette: ap } = stateRef.current;
+        if (cm) {
           onCancelConnectMode();
-        } else if (activePalette !== 'eraser') {
+        } else if (ap !== 'eraser') {
           onPlaceTile(row, col);
         } else {
           onSelectTile(null);
         }
       }
     },
-    [localToGrid, tileAtGrid, connectMode, activePalette, onCancelConnectMode, onPlaceTile, onSelectTile],
+    [localToGrid, tileAtGrid, onCancelConnectMode, onPlaceTile, onSelectTile],
   );
 
   // ── draw functions ─────────────────────────────────────────────────────────
@@ -302,48 +407,49 @@ function WorldBuilderCanvasContent({
         const src = layoutMap.get(t.id);
         const dst = layoutMap.get(t.connectsTo);
         if (!src || !dst) continue;
-        const isSelected = t.id === selectedTileId;
-        const color = isSelected ? C.arrowSelected : C.arrowNormal;
+        const color = selectedSet.has(t.id) ? C.arrowSelected : C.arrowNormal;
         drawArrow(g, src.cx, src.cy, dst.cx, dst.cy, color);
       }
     },
-    [tiles, layoutMap, selectedTileId],
+    [tiles, layoutMap, selectedSet],
   );
 
   const drawSelectionHighlight = useCallback(
     (g: PixiGraphics) => {
       g.clear();
-      if (!selectedTileId) return;
-      const layout = layoutMap.get(selectedTileId);
-      if (!layout) return;
+      if (selectedTileIds.length === 0) return;
       const pad = 3;
-      if (connectMode) {
-        // Source tile: green ring
-        g.rect(layout.x - pad, layout.y - pad, layout.w + pad * 2, layout.h + pad * 2)
-          .stroke({ color: C.connectSrc, width: 3 });
+      if (connectMode && selectedTileIds.length === 1) {
+        const layout = layoutMap.get(selectedTileIds[0]);
+        if (layout) {
+          g.rect(layout.x - pad, layout.y - pad, layout.w + pad * 2, layout.h + pad * 2)
+            .stroke({ color: C.connectSrc, width: 3 });
+        }
       } else {
-        // Normal selection: sky ring
-        g.rect(layout.x - pad, layout.y - pad, layout.w + pad * 2, layout.h + pad * 2)
-          .stroke({ color: C.selected, width: 3 });
+        for (const id of selectedTileIds) {
+          const layout = layoutMap.get(id);
+          if (!layout) continue;
+          g.rect(layout.x - pad, layout.y - pad, layout.w + pad * 2, layout.h + pad * 2)
+            .stroke({ color: C.selected, width: 3 });
+        }
       }
     },
-    [selectedTileId, layoutMap, connectMode],
+    [selectedTileIds, layoutMap, connectMode],
   );
 
   const drawConnectOverlay = useCallback(
     (g: PixiGraphics) => {
       g.clear();
       if (!connectMode) return;
-      // Cyan tint over all non-source tiles
       for (const t of tiles) {
-        if (t.id === selectedTileId) continue;
+        if (selectedSet.has(t.id)) continue;
         const layout = layoutMap.get(t.id);
         if (!layout) continue;
         g.rect(layout.x, layout.y, layout.w, layout.h)
           .fill({ color: C.connectTarget, alpha: 0.25 });
       }
     },
-    [connectMode, tiles, layoutMap, selectedTileId],
+    [connectMode, tiles, layoutMap, selectedSet],
   );
 
   return (
@@ -439,13 +545,22 @@ function WorldBuilderCanvasContent({
       })}
 
       {/* Layer 4: selection highlight + connect overlay */}
-      <pixiGraphics draw={drawSelectionHighlight} />
-      <pixiGraphics draw={drawConnectOverlay} />
+      <pixiGraphics draw={drawSelectionHighlight} eventMode="none" />
+      <pixiGraphics draw={drawConnectOverlay} eventMode="none" />
 
-      {/* Layer 5: drag ghost (topmost) */}
+      {/* Layer 5: drag ghost */}
       <pixiGraphics
+        eventMode="none"
         ref={(g) => {
           if (g) ghostGfxRef.current = g as unknown as PixiGraphics;
+        }}
+      />
+
+      {/* Layer 6: marquee rectangle (topmost) */}
+      <pixiGraphics
+        eventMode="none"
+        ref={(g) => {
+          if (g) rectGfxRef.current = g as unknown as PixiGraphics;
         }}
       />
     </pixiContainer>
@@ -457,8 +572,10 @@ function WorldBuilderCanvasContent({
 interface WorldBuilderCanvasProps {
   editorState: EditorState;
   onPlaceTile: (row: number, col: number) => void;
-  onSelectTile: (id: string | null) => void;
+  onSelectTile: (id: string | null, additive?: boolean) => void;
+  onSelectTiles: (ids: string[]) => void;
   onMoveTile: (id: string, row: number, col: number) => void;
+  onMoveSelectedTiles: (anchorId: string, newRow: number, newCol: number, offsets: GroupOffset[]) => void;
   onResolveConnection: (id: string) => void;
   onCancelConnectMode: () => void;
 }
@@ -467,7 +584,9 @@ export default function WorldBuilderCanvas({
   editorState,
   onPlaceTile,
   onSelectTile,
+  onSelectTiles,
   onMoveTile,
+  onMoveSelectedTiles,
   onResolveConnection,
   onCancelConnectMode,
 }: WorldBuilderCanvasProps) {
@@ -489,7 +608,9 @@ export default function WorldBuilderCanvas({
           editorState={editorState}
           onPlaceTile={onPlaceTile}
           onSelectTile={onSelectTile}
+          onSelectTiles={onSelectTiles}
           onMoveTile={onMoveTile}
+          onMoveSelectedTiles={onMoveSelectedTiles}
           onResolveConnection={onResolveConnection}
           onCancelConnectMode={onCancelConnectMode}
           viewportSize={WORLD_SIZE}

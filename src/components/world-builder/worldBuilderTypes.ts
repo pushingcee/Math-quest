@@ -27,9 +27,15 @@ export interface EditorState {
   gridRows: number;
   startTileId: string;
   tiles: EditorTile[];
-  selectedTileId: string | null;
+  selectedTileIds: string[];
   connectMode: boolean;
   activePalette: PaletteType;
+}
+
+export interface GroupOffset {
+  tileId: string;
+  dRow: number;   // offset from anchor tile's row
+  dCol: number;   // offset from anchor tile's col
 }
 
 export interface DragState {
@@ -37,4 +43,5 @@ export interface DragState {
   startX: number;   // pointer clientX at drag start
   startY: number;   // pointer clientY at drag start
   isDragging: boolean;
+  groupOffsets: GroupOffset[];
 }

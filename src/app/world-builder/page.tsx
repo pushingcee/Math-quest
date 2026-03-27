@@ -1,9 +1,4 @@
-import dynamic from 'next/dynamic';
-
-const WorldBuilder = dynamic(
-  () => import('@/components/world-builder/WorldBuilder'),
-  { ssr: false }
-);
+import WorldBuilder from '@/components/world-builder/WorldBuilder';
 
 export default function WorldBuilderPage() {
   return <WorldBuilder />;

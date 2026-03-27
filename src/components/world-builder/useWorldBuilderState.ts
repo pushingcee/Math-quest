@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { EditorTile, EditorState, PaletteType } from './worldBuilderTypes';
+import { EditorTile, EditorState, PaletteType, GroupOffset } from './worldBuilderTypes';
 import { BoardConfigLoader } from '@/game/board/BoardConfigLoader';
 import { TileConfig, BoardConfig } from '@/game/board/BoardConfig';
 import defaultBoardJson from '@/game/board/boards/default.board.json';
@@ -110,7 +110,7 @@ function stateFromConfig(config: BoardConfig): EditorState {
     gridRows: config.gridRows,
     startTileId: config.startTileId,
     tiles: config.tiles.map(tileConfigToEditorTile),
-    selectedTileId: null,
+    selectedTileIds: [],
     connectMode: false,
     activePalette: 'regular',
   };
@@ -152,7 +152,22 @@ export function useWorldBuilderState() {
           : undefined,
         modifierEffect: type === 'modifier' ? { pointsMultiplier: 2 } : undefined,
       };
-      return { ...s, tiles: [...s.tiles, tile], selectedTileId: id };
+
+      // First tile becomes start tile; subsequent tiles auto-chain from the previous
+      const isFirst = s.tiles.length === 0;
+      const prevTileId = s.tiles.length > 0 ? s.tiles[s.tiles.length - 1].id : null;
+      const tiles = prevTileId
+        ? s.tiles.map((t) =>
+            t.id === prevTileId && !t.connectsTo ? { ...t, connectsTo: id } : t
+          )
+        : s.tiles;
+
+      return {
+        ...s,
+        tiles: [...tiles, tile],
+        selectedTileIds: [id],
+        startTileId: isFirst ? id : s.startTileId,
+      };
     });
   }, []);
 
@@ -162,10 +177,26 @@ export function useWorldBuilderState() {
       tiles: s.tiles
         .filter((t) => t.id !== id)
         .map((t) => (t.connectsTo === id ? { ...t, connectsTo: null } : t)),
-      selectedTileId: s.selectedTileId === id ? null : s.selectedTileId,
+      selectedTileIds: s.selectedTileIds.filter((sid) => sid !== id),
       startTileId: s.startTileId === id ? '' : s.startTileId,
       connectMode: false,
     }));
+  }, []);
+
+  const removeSelectedTiles = useCallback(() => {
+    setState((s) => {
+      if (s.selectedTileIds.length === 0) return s;
+      const removing = new Set(s.selectedTileIds);
+      return {
+        ...s,
+        tiles: s.tiles
+          .filter((t) => !removing.has(t.id))
+          .map((t) => (t.connectsTo && removing.has(t.connectsTo) ? { ...t, connectsTo: null } : t)),
+        selectedTileIds: [],
+        startTileId: removing.has(s.startTileId) ? '' : s.startTileId,
+        connectMode: false,
+      };
+    });
   }, []);
 
   const moveTile = useCallback((id: string, newRow: number, newCol: number) => {
@@ -181,6 +212,34 @@ export function useWorldBuilderState() {
     });
   }, []);
 
+  const moveSelectedTiles = useCallback(
+    (anchorId: string, newRow: number, newCol: number, offsets: GroupOffset[]) => {
+      setState((s) => {
+        const movingIds = new Set(offsets.map((o) => o.tileId));
+        // Build occupied map excluding all tiles being moved
+        const occupied = buildOccupiedMap(s.tiles.filter((t) => !movingIds.has(t.id)));
+        // Validate every tile's new position
+        for (const off of offsets) {
+          const tile = s.tiles.find((t) => t.id === off.tileId);
+          if (!tile) return s;
+          const destRow = newRow + off.dRow;
+          const destCol = newCol + off.dCol;
+          if (isColliding(destRow, destCol, tile.span, null, occupied, s.gridCols, s.gridRows)) return s;
+        }
+        // All valid — apply moves
+        return {
+          ...s,
+          tiles: s.tiles.map((t) => {
+            const off = offsets.find((o) => o.tileId === t.id);
+            if (!off) return t;
+            return { ...t, row: newRow + off.dRow, col: newCol + off.dCol };
+          }),
+        };
+      });
+    },
+    [],
+  );
+
   const updateTile = useCallback((id: string, patch: Partial<EditorTile>) => {
     setState((s) => {
       const oldTile = s.tiles.find((t) => t.id === id);
@@ -194,7 +253,7 @@ export function useWorldBuilderState() {
       return {
         ...s,
         startTileId: idChanged && s.startTileId === id ? newId : s.startTileId,
-        selectedTileId: idChanged && s.selectedTileId === id ? newId : s.selectedTileId,
+        selectedTileIds: idChanged ? s.selectedTileIds.map((sid) => sid === id ? newId : sid) : s.selectedTileIds,
         tiles: s.tiles.map((t) => {
           if (t.id === id) return { ...t, ...patch, id: newId };
           // Update connectsTo references if ID changed
@@ -207,26 +266,44 @@ export function useWorldBuilderState() {
 
   // ── selection ──
 
-  const selectTile = useCallback((id: string | null) => {
-    setState((s) => ({ ...s, selectedTileId: id, connectMode: false }));
+  const selectTile = useCallback((id: string | null, additive?: boolean) => {
+    setState((s) => {
+      if (!id) return { ...s, selectedTileIds: [], connectMode: false };
+      if (additive) {
+        const has = s.selectedTileIds.includes(id);
+        return {
+          ...s,
+          selectedTileIds: has
+            ? s.selectedTileIds.filter((sid) => sid !== id)
+            : [...s.selectedTileIds, id],
+          connectMode: false,
+        };
+      }
+      return { ...s, selectedTileIds: [id], connectMode: false };
+    });
+  }, []);
+
+  const selectTiles = useCallback((ids: string[]) => {
+    setState((s) => ({ ...s, selectedTileIds: ids, connectMode: false }));
   }, []);
 
   const enterConnectMode = useCallback(() => {
     setState((s) => {
-      if (!s.selectedTileId) return s;
+      if (s.selectedTileIds.length !== 1) return s;
       return { ...s, connectMode: true };
     });
   }, []);
 
   const resolveConnection = useCallback((targetId: string) => {
     setState((s) => {
-      if (!s.selectedTileId || !s.connectMode) return s;
-      if (targetId === s.selectedTileId) return { ...s, connectMode: false }; // no self-link
+      const srcId = s.selectedTileIds[0];
+      if (!srcId || s.selectedTileIds.length !== 1 || !s.connectMode) return s;
+      if (targetId === srcId) return { ...s, connectMode: false };
       return {
         ...s,
         connectMode: false,
         tiles: s.tiles.map((t) =>
-          t.id === s.selectedTileId ? { ...t, connectsTo: targetId } : t
+          t.id === srcId ? { ...t, connectsTo: targetId } : t
         ),
       };
     });
@@ -290,9 +367,12 @@ export function useWorldBuilderState() {
     state,
     placeTile,
     removeTile,
+    removeSelectedTiles,
     moveTile,
+    moveSelectedTiles,
     updateTile,
     selectTile,
+    selectTiles,
     setActivePalette,
     enterConnectMode,
     resolveConnection,
