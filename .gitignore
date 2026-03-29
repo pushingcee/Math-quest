@@ -39,6 +39,8 @@ yarn-error.log*
 # prisma (server)
 server/prisma/dev.db
 server/prisma/dev.db-journal
+server/prisma/*.db
+server/prisma/*.db-journal
 server/dist/
 server/node_modules/
 
