@@ -11,7 +11,7 @@ problemSetsRouter.get('/', async (_req, res) => {
     orderBy: { createdAt: 'desc' },
   });
 
-  const meta = sets.map((s) => ({
+  const meta = sets.map((s: (typeof sets)[number]) => ({
     id: s.id,
     name: s.name,
     problemCount: JSON.parse(s.data).problems?.length ?? 0,
