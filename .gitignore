@@ -36,6 +36,18 @@ yarn-error.log*
 # vercel
 .vercel
 
+# prisma (server)
+server/prisma/dev.db
+server/prisma/dev.db-journal
+server/dist/
+server/node_modules/
+
+# internal docs — strategy, philosophy, platform plans (keep out of public repo)
+/docs/
+
+# brainstorming session files (visual companion temp content)
+.superpowers/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

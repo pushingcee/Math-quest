@@ -3,6 +3,26 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Academic Press — platform art style tokens */
+  --ed-bg: #faf8f5;
+  --ed-surface: #ffffff;
+  --ed-surface-alt: #f5f2ed;
+  --ed-border: #d4cfc7;
+  --ed-border-hover: #b8b0a4;
+  --ed-text: #2c2825;
+  --ed-text-dim: #6b6560;
+  --ed-text-muted: #9b948c;
+  --ed-accent: #3730a3;
+  --ed-accent-hover: #312e81;
+  --ed-accent-light: #eef2ff;
+  --ed-accent-text: #ffffff;
+  --ed-success: #166534;
+  --ed-success-light: #f0fdf4;
+  --ed-danger: #991b1b;
+  --ed-danger-light: #fef2f2;
+  --ed-warning: #92400e;
+  --ed-warning-light: #fffbeb;
 }
 
 @theme inline {

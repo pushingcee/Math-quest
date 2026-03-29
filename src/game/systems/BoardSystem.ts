@@ -1,8 +1,8 @@
 import { TileData, Difficulty } from '@/types/game';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { TileType, ObstacleType } from '../constants/enums';
-import { generateMathProblem } from '../utils/mathGenerator';
 import { BoardConfig, TileConfig } from '../board/BoardConfig';
+import { ProblemSystem, ProblemPoolState } from './ProblemSystem';
 
 const TILE_TYPE_MAP: Record<TileConfig['type'], TileType> = {
   regular: TileType.Regular,
@@ -26,8 +26,8 @@ export class BoardSystem {
   static createBoard(config: BoardConfig, problems?: ImportedProblemsData): TileData[] {
     const newTiles: TileData[] = [];
 
-    // Create a pool of imported problems if available
-    let problemsPool = problems ? [...problems.problems] : [];
+    // Delegate all pool management to ProblemSystem
+    let poolState: ProblemPoolState = ProblemSystem.initializeProblemPool(problems ?? null);
 
     // Map from config tile id → newTiles index, for modifier resolution
     const idToNewIndex = new Map<string, number>();
@@ -48,31 +48,21 @@ export class BoardSystem {
         const difficulty = (Math.floor(Math.random() * 3) + 1) as Difficulty;
         const points = difficulty * 10 + Math.floor(Math.random() * 20);
 
-        let problem;
-        if (problemsPool.length > 0) {
-          const randomIndex = Math.floor(Math.random() * problemsPool.length);
-          const importedProblem = problemsPool[randomIndex];
-          problemsPool.splice(randomIndex, 1);
-
-          if (problemsPool.length === 0 && problems) {
-            problemsPool = [...problems.problems];
-          }
-
-          problem = {
-            question: importedProblem.question.trim(),
-            answer: parseFloat(importedProblem.answer.trim().replace(/\s+/g, ''))
-          };
-        } else {
-          problem = generateMathProblem(difficulty);
-        }
+        const result = ProblemSystem.getNextProblem(
+          difficulty,
+          problems ?? null,
+          poolState.pool,
+          poolState.usedIds
+        );
+        poolState = result.newPoolState;
 
         newTiles.push({
           index: idx,
           type: TileType.Regular,
           difficulty,
           points,
-          question: problem.question,
-          answer: problem.answer,
+          question: result.problem.question,
+          answer: result.problem.answer,
           pointsMultiplier: tileConfig.pointsMultiplier,
         });
       } else if (type === TileType.Obstacle) {

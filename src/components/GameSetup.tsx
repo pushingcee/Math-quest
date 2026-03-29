@@ -1,194 +1,254 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { useLanguage } from '@/context/LanguageContext';
 import { t } from '@/i18n/translations';
 import LanguageSelector from './LanguageSelector';
+import { LocalUploadProvider } from '@/game/providers/LocalUploadProvider';
+import { PersistedSetProvider } from '@/game/providers/PersistedSetProvider';
+import ProblemUpload from './ProblemUpload';
+import ProblemSetSelector from './ProblemSetSelector';
+
+const FF_UPLOAD = process.env.NEXT_PUBLIC_FF_UPLOAD_PROBLEMS !== 'false';
+const FF_PERSISTED = process.env.NEXT_PUBLIC_FF_PERSISTED_PROBLEM_SETS === 'true';
 
 interface GameSetupProps {
   onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number, autoCloseModal?: boolean, displayProblemsInTiles?: boolean) => void;
 }
 
+const fieldStyle: React.CSSProperties = {
+  background: 'var(--ed-surface, #ffffff)',
+  border: '1px solid var(--ed-border, #d4cfc7)',
+  borderRadius: '6px',
+  padding: '0.375rem 0.75rem',
+  fontSize: '0.9375rem',
+  color: 'var(--ed-text, #2c2825)',
+  fontFamily: 'var(--font-source-sans), system-ui, sans-serif',
+  outline: 'none',
+  transition: 'border-color 150ms ease',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '0.9375rem',
+  color: 'var(--ed-text, #2c2825)',
+  fontFamily: 'var(--font-source-sans), system-ui, sans-serif',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  cursor: 'pointer',
+};
+
+const sectionLabelStyle: React.CSSProperties = {
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  letterSpacing: '0.02em',
+  color: 'var(--ed-text-dim, #6b6560)',
+  fontFamily: 'var(--font-source-sans), system-ui, sans-serif',
+  textTransform: 'uppercase' as const,
+  marginBottom: '0.75rem',
+};
+
 export default function GameSetup({ onStart }: GameSetupProps) {
   const { language } = useLanguage();
   const [playerCount, setPlayerCount] = useState(1);
   const [importedProblems, setImportedProblems] = useState<ImportedProblemsData | null>(null);
-  const [fileName, setFileName] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const [pendingUpload, setPendingUpload] = useState<ImportedProblemsData | null>(null);
+
+  const persistedProvider = useMemo(
+    () => (FF_PERSISTED ? new PersistedSetProvider() : null),
+    []
+  );
+  const uploadProvider = useMemo(
+    () => (FF_UPLOAD ? new LocalUploadProvider() : null),
+    []
+  );
+
   const [negativePoints, setNegativePoints] = useState(true);
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timerValue, setTimerValue] = useState<number | string>(30);
   const [autoCloseModal, setAutoCloseModal] = useState(false);
   const [displayProblemsInTiles, setDisplayProblemsInTiles] = useState(false);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setFileName(file.name);
-    setError('');
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const json = JSON.parse(e.target?.result as string) as ImportedProblemsData;
-
-        // Validate the JSON structure
-        if (!json.problems || !Array.isArray(json.problems)) {
-          throw new Error('Invalid JSON format: missing problems array');
-        }
-
-        // Validate each problem has required fields
-        const valid = json.problems.every(p =>
-          p.id !== undefined && p.question !== undefined && p.answer !== undefined
-        );
-
-        if (!valid) {
-          throw new Error('Invalid JSON format: problems must have id, question, and answer');
-        }
-
-        setImportedProblems(json);
-        console.log('Imported problems:', json);
-      } catch (err) {
-        setError('Invalid JSON file. Please check the format.');
-        setImportedProblems(null);
-        console.error('JSON parse error:', err);
-      }
-    };
-    reader.readAsText(file);
+  const handleProblemsLoaded = (data: ImportedProblemsData) => {
+    setImportedProblems(data);
+    if (FF_PERSISTED) {
+      setPendingUpload(data);
+    }
   };
 
   const handleStart = () => {
-    // Ensure timerValue is a valid number
     const validTimerValue = typeof timerValue === 'string' ? parseInt(timerValue) || 30 : timerValue;
     onStart(playerCount, importedProblems || undefined, negativePoints, timerEnabled, validTimerValue, autoCloseModal, displayProblemsInTiles);
   };
 
   return (
-    <div className="text-center">
-      <LanguageSelector />
-      <h2 className="mb-5 text-2xl font-semibold text-black">{t(language, 'gameSetup')}</h2>
-      <label className="mb-2.5 block text-xl text-black">
-        {t(language, 'numberOfPlayers')}
+    <div style={{ maxWidth: '480px', margin: '0 auto', padding: '0.5rem 0' }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
+        <h2 style={{
+          fontFamily: 'var(--font-libre-baskerville), Georgia, serif',
+          fontWeight: 700,
+          fontSize: '1.25rem',
+          color: 'var(--ed-text, #2c2825)',
+          letterSpacing: '-0.02em',
+          margin: 0,
+        }}>
+          {t(language, 'gameSetup')}
+        </h2>
+        <LanguageSelector />
+      </div>
+
+      {/* Players */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p style={sectionLabelStyle}>{t(language, 'numberOfPlayers')}</p>
         <select
           value={playerCount}
           onChange={(e) => setPlayerCount(parseInt(e.target.value))}
-          className="ml-2.5 rounded-lg border-2 border-purple-500 bg-white px-3 py-1.5 text-lg text-black transition-all hover:border-purple-600 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+          style={{ ...fieldStyle, width: '100%' }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--ed-accent, #3730a3)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--ed-border, #d4cfc7)'; }}
         >
           <option value={1}>{t(language, 'player1')}</option>
           <option value={2}>{t(language, 'player2')}</option>
           <option value={3}>{t(language, 'player3')}</option>
           <option value={4}>{t(language, 'player4')}</option>
         </select>
-      </label>
-
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-lg text-black">
-          <input
-            type="checkbox"
-            checked={negativePoints}
-            onChange={(e) => setNegativePoints(e.target.checked)}
-            className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
-          />
-          <span className="font-medium">{t(language, 'enableNegativePoints')}</span>
-        </label>
       </div>
 
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-lg text-black">
-          <input
-            type="checkbox"
-            checked={timerEnabled}
-            onChange={(e) => setTimerEnabled(e.target.checked)}
-            className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
-          />
-          <span className="font-medium">{t(language, 'enableTimer')}</span>
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={timerValue}
-          onChange={(e) => {
-            const val = e.target.value;
-            // Allow empty or valid numbers only
-            if (val === '' || /^\d+$/.test(val)) {
-              setTimerValue(val === '' ? '' : parseInt(val));
-            }
-          }}
-          onBlur={() => {
-            // Validate on blur: ensure it's a valid number between 5-300
-            const num = typeof timerValue === 'string' ? parseInt(timerValue) : timerValue;
-            if (isNaN(num) || timerValue === '') {
-              setTimerValue(30);
-            } else if (num < 5) {
-              setTimerValue(5);
-            } else if (num > 300) {
-              setTimerValue(300);
-            }
-          }}
-          disabled={!timerEnabled}
-          className={`w-20 rounded-lg border-2 px-3 py-1.5 text-center text-lg transition-all focus:outline-none focus:ring-2 ${
-            timerEnabled
-              ? 'border-purple-500 text-black focus:border-purple-600 focus:ring-purple-500/20'
-              : 'cursor-not-allowed border-gray-300 bg-gray-100 text-gray-400'
-          }`}
-        />
-        <span className="text-lg text-black">{t(language, 'seconds')}</span>
-      </div>
+      {/* Settings */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p style={sectionLabelStyle}>Settings</p>
+        <div style={{
+          background: 'var(--ed-surface, #ffffff)',
+          border: '1px solid var(--ed-border, #d4cfc7)',
+          borderRadius: '6px',
+          overflow: 'hidden',
+        }}>
+          {/* Negative points */}
+          <label style={{
+            ...labelStyle,
+            padding: '0.75rem 1rem',
+            borderBottom: '1px solid var(--ed-border, #d4cfc7)',
+          }}>
+            <input
+              type="checkbox"
+              checked={negativePoints}
+              onChange={(e) => setNegativePoints(e.target.checked)}
+              style={{ accentColor: 'var(--ed-accent, #3730a3)', width: '16px', height: '16px', cursor: 'pointer' }}
+            />
+            <span>{t(language, 'enableNegativePoints')}</span>
+          </label>
 
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-lg text-black">
-          <input
-            type="checkbox"
-            checked={autoCloseModal}
-            onChange={(e) => setAutoCloseModal(e.target.checked)}
-            className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
-          />
-          <span className="font-medium">{t(language, 'enableModalAutoClose')}</span>
-        </label>
-      </div>
-
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-lg text-black">
-          <input
-            type="checkbox"
-            checked={displayProblemsInTiles}
-            onChange={(e) => setDisplayProblemsInTiles(e.target.checked)}
-            className="h-5 w-5 cursor-pointer rounded border-2 border-purple-500 text-purple-600 focus:ring-2 focus:ring-purple-500/20"
-          />
-          <span className="font-medium">{t(language, 'displayProblemsInTiles')}</span>
-        </label>
-      </div>
-
-      <div className="mt-6 rounded-lg border-2 border-dashed border-purple-300 bg-purple-50 p-4">
-        <label className="block text-lg font-semibold text-black mb-2">
-          {t(language, 'importMathProblems')}
-        </label>
-        <p className="text-sm text-gray-600 mb-3">
-          {t(language, 'uploadJsonFile')}
-        </p>
-        <input
-          type="file"
-          accept=".json"
-          onChange={handleFileUpload}
-          className="w-full text-sm text-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-500 file:text-white hover:file:bg-purple-600 file:cursor-pointer"
-        />
-        {fileName && (
-          <div className="mt-2 text-sm text-green-600 font-medium">
-            {t(language, 'loaded')} {fileName} ({importedProblems?.problemCount} {t(language, 'problems')})
+          {/* Timer */}
+          <div style={{
+            padding: '0.75rem 1rem',
+            borderBottom: '1px solid var(--ed-border, #d4cfc7)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+          }}>
+            <label style={{ ...labelStyle, flex: 1 }}>
+              <input
+                type="checkbox"
+                checked={timerEnabled}
+                onChange={(e) => setTimerEnabled(e.target.checked)}
+                style={{ accentColor: 'var(--ed-accent, #3730a3)', width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <span>{t(language, 'enableTimer')}</span>
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={timerValue}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d+$/.test(val)) {
+                  setTimerValue(val === '' ? '' : parseInt(val));
+                }
+              }}
+              onBlur={() => {
+                const num = typeof timerValue === 'string' ? parseInt(timerValue) : timerValue;
+                if (isNaN(num) || timerValue === '') setTimerValue(30);
+                else if (num < 5) setTimerValue(5);
+                else if (num > 300) setTimerValue(300);
+              }}
+              disabled={!timerEnabled}
+              style={{
+                ...fieldStyle,
+                width: '4rem',
+                textAlign: 'center',
+                opacity: timerEnabled ? 1 : 0.4,
+                cursor: timerEnabled ? 'text' : 'not-allowed',
+              }}
+              onFocus={(e) => { if (timerEnabled) e.currentTarget.style.borderColor = 'var(--ed-accent, #3730a3)'; }}
+            />
+            <span style={{ fontSize: '0.875rem', color: 'var(--ed-text-dim, #6b6560)', fontFamily: 'var(--font-source-sans), system-ui, sans-serif' }}>
+              {t(language, 'seconds')}
+            </span>
           </div>
-        )}
-        {error && (
-          <div className="mt-2 text-sm text-red-600 font-medium">
-            {t(language, 'invalidJsonFile')}
-          </div>
-        )}
+
+          {/* Auto-close modal */}
+          <label style={{
+            ...labelStyle,
+            padding: '0.75rem 1rem',
+            borderBottom: '1px solid var(--ed-border, #d4cfc7)',
+          }}>
+            <input
+              type="checkbox"
+              checked={autoCloseModal}
+              onChange={(e) => setAutoCloseModal(e.target.checked)}
+              style={{ accentColor: 'var(--ed-accent, #3730a3)', width: '16px', height: '16px', cursor: 'pointer' }}
+            />
+            <span>{t(language, 'enableModalAutoClose')}</span>
+          </label>
+
+          {/* Display problems in tiles */}
+          <label style={{ ...labelStyle, padding: '0.75rem 1rem' }}>
+            <input
+              type="checkbox"
+              checked={displayProblemsInTiles}
+              onChange={(e) => setDisplayProblemsInTiles(e.target.checked)}
+              style={{ accentColor: 'var(--ed-accent, #3730a3)', width: '16px', height: '16px', cursor: 'pointer' }}
+            />
+            <span>{t(language, 'displayProblemsInTiles')}</span>
+          </label>
+        </div>
       </div>
 
+      {/* Problem sourcing — gated by feature flags */}
+      {FF_UPLOAD && uploadProvider && (
+        <ProblemUpload provider={uploadProvider} onLoaded={handleProblemsLoaded} />
+      )}
+
+      {FF_PERSISTED && persistedProvider && (
+        <ProblemSetSelector
+          provider={persistedProvider}
+          onSelected={(data) => setImportedProblems(data)}
+          pendingUpload={FF_UPLOAD ? pendingUpload : undefined}
+          onSaved={() => setPendingUpload(null)}
+        />
+      )}
+
+      {/* Start button */}
       <button
         onClick={handleStart}
-        className="mt-5 w-full rounded-full bg-gradient-to-br from-purple-500 to-purple-700 px-8 py-3 text-lg font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-500/40"
+        style={{
+          width: '100%',
+          padding: '0.75rem 2rem',
+          background: 'var(--ed-accent, #3730a3)',
+          color: 'var(--ed-accent-text, #ffffff)',
+          border: 'none',
+          borderRadius: '6px',
+          fontSize: '0.9375rem',
+          fontWeight: 600,
+          fontFamily: 'var(--font-source-sans), system-ui, sans-serif',
+          cursor: 'pointer',
+          transition: 'background 150ms ease',
+          marginTop: '0.5rem',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ed-accent-hover, #312e81)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--ed-accent, #3730a3)'; }}
       >
         {t(language, 'startGame')}
       </button>

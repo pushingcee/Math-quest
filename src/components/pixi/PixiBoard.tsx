@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { Application, extend, useApplication } from '@pixi/react';
-import { Container, Graphics as PixiGraphics, Sprite as PixiSprite, Text as PixiText, Texture, Assets } from 'pixi.js';
+import { Container, Graphics as PixiGraphics, Sprite as PixiSprite, Text as PixiText, Texture, Assets, Ticker } from 'pixi.js';
 import { TileData, Player } from '@/types/game';
 import { TILE_GAP } from '@/game/board/BoardLayout';
 import { BoardGraph } from '@/game/board/BoardGraph';
@@ -52,9 +52,9 @@ function FpsCounter({ x, y }: { x: number; y: number }) {
     if (!ticker) return;
     let frames = 0;
     let elapsed = 0;
-    const tick = () => {
+    const tick = (t: Ticker) => {
       frames++;
-      elapsed += ticker.deltaMS;
+      elapsed += t.deltaMS;
       if (elapsed >= 500) {
         const fps = Math.round((frames / elapsed) * 1000);
         if (textRef.current) textRef.current.text = `${fps} FPS`;
