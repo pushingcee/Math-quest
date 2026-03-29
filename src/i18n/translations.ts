@@ -2,6 +2,9 @@ export type Language = 'bg' | 'en';
 
 export const translations = {
   bg: {
+    // Problem Sets
+    savedProblemSets: 'Запазени набори от задачи',
+
     // Game Setup
     gameSetup: 'Настройка на игра',
     numberOfPlayers: 'Брой играчи:',
@@ -139,6 +142,9 @@ export const translations = {
     landedOnObstacle: 'Попадна на препятствие!',
   },
   en: {
+    // Problem Sets
+    savedProblemSets: 'Saved Problem Sets',
+
     // Game Setup
     gameSetup: 'Game Setup',
     numberOfPlayers: 'Number of Players:',

@@ -82,7 +82,9 @@ export default function AvatarSelection({
 
   return (
     <div className="text-center">
-      <h2 className="mb-6 text-3xl font-bold text-purple-700">
+      <h2 className="mb-6 text-3xl font-bold"
+        style={{ fontFamily: 'var(--font-libre-baskerville), Georgia, serif', color: 'var(--ed-text, #2c2825)', letterSpacing: '-0.02em' }}
+      >
         {t(language, 'playerChooseCharacter', { number: playerNumber })}
       </h2>
 
@@ -101,13 +103,13 @@ export default function AvatarSelection({
                 onClick={() => handleAvatarClick(index)}
                 disabled={!isAvailable}
                 className={`
-                  relative flex flex-col items-center gap-3 rounded-xl border-4 p-6 transition-all
+                  relative flex flex-col items-center gap-3 rounded-xl border-2 p-6 transition-all
                   ${
                     isChosen
-                      ? 'border-purple-600 bg-purple-50 shadow-lg'
+                      ? 'border-[#3730a3] bg-[#eef2ff] shadow-md'
                       : isAvailable
-                      ? 'cursor-pointer border-purple-300 bg-white hover:scale-105 hover:border-purple-500 hover:shadow-xl'
-                      : 'cursor-not-allowed border-gray-300 bg-gray-100 opacity-50'
+                      ? 'cursor-pointer border-[#d4cfc7] bg-white hover:scale-105 hover:border-[#3730a3] hover:shadow-md'
+                      : 'cursor-not-allowed border-[#d4cfc7] bg-[#f5f2ed] opacity-50'
                   }
                 `}
               >
@@ -148,10 +150,10 @@ export default function AvatarSelection({
                   relative flex h-20 w-20 flex-col items-center justify-center rounded-lg border-4 transition-all
                   ${
                     isChosen
-                      ? 'scale-110 border-purple-600 shadow-xl'
+                      ? 'scale-110 border-[#3730a3] shadow-lg ring-2 ring-[#3730a3]'
                       : isTaken
                       ? 'cursor-not-allowed border-gray-300 opacity-40'
-                      : 'cursor-pointer border-transparent hover:scale-110 hover:border-purple-400 hover:shadow-lg'
+                      : 'cursor-pointer border-transparent hover:scale-110 hover:border-white hover:shadow-lg'
                   }
                 `}
                 style={{ backgroundColor: color.hex }}
@@ -175,12 +177,24 @@ export default function AvatarSelection({
         <button
           onClick={handleConfirm}
           disabled={selectedAvatarIndex === null || selectedColor === null}
+          style={{
+            background: selectedAvatarIndex !== null && selectedColor !== null ? 'var(--ed-accent, #3730a3)' : '#9ca3af',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '0.75rem 2rem',
+            fontSize: '0.9375rem',
+            fontWeight: 600,
+            fontFamily: 'var(--font-source-sans), system-ui, sans-serif',
+            transition: 'background 150ms ease',
+          }}
+          onMouseEnter={(e) => { if (selectedAvatarIndex !== null && selectedColor !== null) e.currentTarget.style.background = 'var(--ed-accent-hover, #312e81)'; }}
+          onMouseLeave={(e) => { if (selectedAvatarIndex !== null && selectedColor !== null) e.currentTarget.style.background = 'var(--ed-accent, #3730a3)'; }}
           className={`
-            rounded-xl px-8 py-3 text-xl font-bold text-white shadow-lg transition-all
             ${
               selectedAvatarIndex !== null && selectedColor !== null
-                ? 'bg-gradient-to-r from-purple-500 to-purple-700 hover:scale-105 hover:shadow-xl cursor-pointer'
-                : 'bg-gray-400 cursor-not-allowed opacity-50'
+                ? 'cursor-pointer'
+                : 'opacity-50 cursor-not-allowed'
             }
           `}
         >

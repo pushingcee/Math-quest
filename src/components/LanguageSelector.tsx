@@ -7,32 +7,43 @@ export default function LanguageSelector() {
   const { language, setLanguage } = useLanguage();
 
   return (
-    <div className="mb-8 rounded-xl border-2 border-purple-300 bg-purple-50 p-6">
-      <h3 className="mb-4 text-center text-xl font-bold text-purple-700">
-        {t(language, 'selectLanguage')}
-      </h3>
-      <div className="flex gap-4 justify-center">
-        <button
-          onClick={() => setLanguage('bg')}
-          className={`px-6 py-3 rounded-full font-bold text-lg transition-all ${
-            language === 'bg'
-              ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg'
-              : 'bg-white border-2 border-purple-300 text-purple-700 hover:border-purple-500'
-          }`}
-        >
-          🇧🇬 {t(language, 'bulgarian')}
-        </button>
-        <button
-          onClick={() => setLanguage('en')}
-          className={`px-6 py-3 rounded-full font-bold text-lg transition-all ${
-            language === 'en'
-              ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg'
-              : 'bg-white border-2 border-purple-300 text-purple-700 hover:border-purple-500'
-          }`}
-        >
-          🇬🇧 {t(language, 'english')}
-        </button>
-      </div>
+    <div style={{ display: 'flex', gap: '0.25rem' }}>
+      <button
+        onClick={() => setLanguage('bg')}
+        style={{
+          padding: '0.25rem 0.625rem',
+          borderRadius: '4px',
+          border: '1px solid',
+          borderColor: language === 'bg' ? 'var(--ed-accent, #3730a3)' : 'var(--ed-border, #d4cfc7)',
+          background: language === 'bg' ? 'var(--ed-accent-light, #eef2ff)' : 'transparent',
+          color: language === 'bg' ? 'var(--ed-accent, #3730a3)' : 'var(--ed-text-dim, #6b6560)',
+          fontFamily: 'var(--font-source-sans), system-ui, sans-serif',
+          fontSize: '0.8125rem',
+          fontWeight: language === 'bg' ? 600 : 400,
+          cursor: 'pointer',
+          transition: 'all 150ms ease',
+        }}
+      >
+        🇧🇬 {t(language, 'bulgarian')}
+      </button>
+      <button
+        onClick={() => setLanguage('en')}
+        style={{
+          padding: '0.25rem 0.625rem',
+          borderRadius: '4px',
+          border: '1px solid',
+          borderColor: language === 'en' ? 'var(--ed-accent, #3730a3)' : 'var(--ed-border, #d4cfc7)',
+          background: language === 'en' ? 'var(--ed-accent-light, #eef2ff)' : 'transparent',
+          color: language === 'en' ? 'var(--ed-accent, #3730a3)' : 'var(--ed-text-dim, #6b6560)',
+          fontFamily: 'var(--font-source-sans), system-ui, sans-serif',
+          fontSize: '0.8125rem',
+          fontWeight: language === 'en' ? 600 : 400,
+          cursor: 'pointer',
+          transition: 'all 150ms ease',
+        }}
+      >
+        🇬🇧 {t(language, 'english')}
+      </button>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { assetPath } from '@/utils/assetPath';
 import { ItemSystem } from '@/game/systems/ItemSystem';
 import { DevTools } from '@/game/debug/devtools';
 import { useLanguage } from '@/context/LanguageContext';
+import { useGameState } from '@/contexts/GameStateContext';
 import { t } from '@/i18n/translations';
 import GameSetup from './GameSetup';
 import AvatarSelection from './AvatarSelection';
@@ -31,6 +32,7 @@ const PixiBoard = dynamic(() => import('./pixi/PixiBoard'), { ssr: false });
 export default function MathQuest() {
   // Language support
   const { language } = useLanguage();
+  const { setIsPlaying } = useGameState();
 
   // Create game engine instance (persists across renders)
   const engine = useMemo(() => new GameEngine(), []);
@@ -55,6 +57,12 @@ export default function MathQuest() {
     });
     return unsubscribe;
   }, [engine]);
+
+  // Sync game screen to nav bar visibility
+  useEffect(() => {
+    setIsPlaying(gameState.screen === GameScreen.Playing);
+    return () => setIsPlaying(false);
+  }, [gameState.screen, setIsPlaying]);
 
   // Update dice label when current player changes
   useEffect(() => {
@@ -421,13 +429,21 @@ export default function MathQuest() {
 
   return (
     <div
-      className={`flex h-screen items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5 ${gameState.screen !== GameScreen.Playing ? 'bg-gradient-to-br from-purple-500 to-purple-800' : ''}`}
-      style={{ backgroundImage: gameState.screen === GameScreen.Playing ? `url('${assetPath('/table-wizzard.jpg')}')` : undefined }}
+      className={`flex h-screen items-start justify-center bg-cover bg-center bg-no-repeat p-2 sm:items-center sm:p-5`}
+      style={{ backgroundImage: `url('${assetPath('/table-wizzard.jpg')}')` }}
     >
-      <div className={`w-full max-w-6xl rounded-2xl ${gameState.screen !== GameScreen.Playing ? 'bg-white/95 shadow-2xl p-4 sm:p-8' : 'sm:pb-6 lg:pb-10'}`}>
+      <div className={`w-full max-w-6xl rounded-2xl ${gameState.screen !== GameScreen.Playing ? 'p-4 sm:p-8' : 'sm:pb-6 lg:pb-10'}`}
+        style={gameState.screen !== GameScreen.Playing ? {
+          background: 'var(--ed-surface, #ffffff)',
+          border: '1px solid var(--ed-border, #d4cfc7)',
+          boxShadow: '0 8px 40px rgba(0, 0, 0, 0.35)',
+        } : undefined}
+      >
         <div ref={headerRef}>
           <div className="mb-1 text-center sm:mb-4">
-            <h1 className="mb-0.5 bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-xl font-bold text-transparent sm:mb-2.5 sm:text-5xl md:text-5xl">
+            <h1 className="mb-0.5 text-xl font-bold sm:mb-2.5 sm:text-5xl md:text-5xl"
+              style={{ fontFamily: 'var(--font-libre-baskerville), Georgia, serif', color: 'var(--ed-text, #2c2825)', letterSpacing: '-0.02em' }}
+            >
               Math Quest
             </h1>
             {gameState.screen === GameScreen.Playing && (

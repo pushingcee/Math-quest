@@ -1,0 +1,253 @@
+/* ── Problem Sets – Natural / Modern Editorial aesthetic ── */
+
+/* ---------- tokens ---------- */
+.ps-page {
+  --ps-bg: #f6f8fa;
+  --ps-surface: #ffffff;
+  --ps-surface-hover: #f3f4f6;
+  --ps-border: #d0d7de;
+  --ps-border-hover: #afb8c1;
+  --ps-accent: #4f46e5;
+  /* Indigo for a refined educator feel */
+  --ps-accent-dim: #4338ca;
+  --ps-text: #1f2328;
+  --ps-text-dim: #656d76;
+  --ps-danger: #cf222e;
+  --ps-math-bg: #f6f8fa;
+  --ps-radius: 8px;
+
+  min-height: 100vh;
+  background: var(--ps-bg);
+  color: var(--ps-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* ---------- layout ---------- */
+.ps-container {
+  max-width: 1012px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* ---------- header ---------- */
+.ps-header {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--ps-border);
+  padding-bottom: 1.5rem;
+}
+
+.ps-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ps-accent);
+  text-decoration: none;
+  transition: color 0.2s;
+  margin-bottom: 1rem;
+}
+
+.ps-back-link:hover {
+  text-decoration: underline;
+}
+
+.ps-title {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ps-text);
+  margin: 0 0 0.25rem;
+  font-family: 'Georgia', serif;
+  /* Keep the academic touch */
+}
+
+.ps-subtitle {
+  font-size: 0.95rem;
+  color: var(--ps-text-dim);
+  margin: 0;
+}
+
+/* ---------- grid – list page ---------- */
+.ps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* ---------- card ---------- */
+.ps-card {
+  position: relative;
+  background: var(--ps-surface);
+  border: 1px solid var(--ps-border);
+  border-radius: var(--ps-radius);
+  padding: 1.25rem;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.ps-card:hover {
+  border-color: var(--ps-border-hover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.ps-card-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ps-accent);
+}
+
+.ps-card:hover .ps-card-name {
+  text-decoration: underline;
+}
+
+.ps-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--ps-text-dim);
+}
+
+.ps-card-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--ps-math-bg);
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--ps-border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ps-text);
+}
+
+/* ---------- detail – problem table ---------- */
+.ps-table-wrap {
+  background: var(--ps-surface);
+  border: 1px solid var(--ps-border);
+  border-radius: var(--ps-radius);
+  overflow: hidden;
+}
+
+.ps-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ps-table th {
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ps-text-dim);
+  padding: 0.75rem 1rem;
+  background: #f6f8fa;
+  border-bottom: 1px solid var(--ps-border);
+}
+
+.ps-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--ps-border);
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.ps-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ps-table tbody tr:hover {
+  background: #f6f8fa;
+}
+
+.ps-id-cell {
+  color: var(--ps-text-dim);
+  width: 50px;
+}
+
+.ps-question-cell {
+  font-family: 'ui-monospace', 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  color: var(--ps-text);
+}
+
+.ps-answer-cell {
+  font-family: 'ui-monospace', 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-weight: 600;
+  color: var(--ps-accent);
+  text-align: right;
+  width: 100px;
+}
+
+/* ---------- states ---------- */
+.ps-loading,
+.ps-error,
+.ps-empty {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.ps-loading {
+  color: var(--ps-text-dim);
+}
+
+.ps-error {
+  color: var(--ps-danger);
+}
+
+.ps-empty {
+  color: var(--ps-text-dim);
+}
+
+.ps-spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--ps-border);
+  border-top-color: var(--ps-accent);
+  border-radius: 50%;
+  animation: ps-spin 0.7s linear infinite;
+  margin-bottom: 0.75rem;
+}
+
+/* ---------- detail stats bar ---------- */
+.ps-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.ps-stat {
+  background: var(--ps-surface);
+  border: 1px solid var(--ps-border);
+  border-radius: var(--ps-radius);
+  padding: 1rem;
+  flex: 1;
+  min-width: 140px;
+}
+
+.ps-stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ps-text-dim);
+  margin-bottom: 0.25rem;
+}
+
+.ps-stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ps-text);
+}
+
+/* ---------- animations ---------- */
+@keyframes ps-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
