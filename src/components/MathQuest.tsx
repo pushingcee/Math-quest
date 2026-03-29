@@ -440,21 +440,17 @@ export default function MathQuest() {
         } : undefined}
       >
         <div ref={headerRef}>
-          <div className="mb-1 text-center sm:mb-4">
-            <h1 className="mb-0.5 text-xl font-bold sm:mb-2.5 sm:text-5xl md:text-5xl"
-              style={{ fontFamily: 'var(--font-libre-baskerville), Georgia, serif', color: 'var(--ed-text, #2c2825)', letterSpacing: '-0.02em' }}
-            >
-              Math Quest
-            </h1>
-            {gameState.screen === GameScreen.Playing && (
-              <div className="text-sm font-semibold text-black sm:text-xl">
-                Round <span>{gameState.round}</span> of {gameState.config.maxRounds}
-              </div>
-            )}
-          </div>
-
+          {gameState.screen !== GameScreen.Playing && (
+            <div className="mb-1 text-center sm:mb-4">
+              <h1 className="mb-0.5 text-xl font-bold sm:mb-2.5 sm:text-5xl md:text-5xl"
+                style={{ fontFamily: 'var(--font-libre-baskerville), Georgia, serif', color: 'var(--ed-text, #2c2825)', letterSpacing: '-0.02em' }}
+              >
+                Math Quest
+              </h1>
+            </div>
+          )}
           {gameState.screen === GameScreen.Playing && (
-            <div className="mb-1 flex flex-wrap justify-center gap-1 sm:mb-4 sm:gap-4">
+            <div className="mb-1 flex flex-wrap justify-center gap-1 sm:mb-2 sm:gap-4">
               {gameState.players.map((player, index) => (
                 <PlayerCard
                   key={player.id}
@@ -462,6 +458,16 @@ export default function MathQuest() {
                   isActive={index === gameState.currentPlayer}
                 />
               ))}
+            </div>
+          )}
+
+          {gameState.screen === GameScreen.Playing && (
+            <div className="mb-1 text-center sm:mb-2">
+              <div className="inline-block rounded-xl border-2 border-purple-500 bg-white px-4 py-1.5 text-sm font-semibold text-purple-700 shadow-md sm:text-base">
+                {gameState.importedProblems
+                  ? `${gameState.importedProblems.problems.length - gameState.correctlyAnsweredProblemIds.size} problems remaining`
+                  : `Round ${gameState.round} of ${gameState.config.maxRounds}`}
+              </div>
             </div>
           )}
         </div>

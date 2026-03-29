@@ -63,7 +63,8 @@ export interface GameState {
   // Imported Problems
   importedProblems: ImportedProblemsData | null;
   problemPool: ImportedProblem[];
-  usedProblemIds: Set<number>;
+  correctlyAnsweredProblemIds: Set<number>;
+  activeProblemId: number | null;
 
   // Configuration
   config: GameConfig;
@@ -105,7 +106,8 @@ export const createInitialState = (): GameState => ({
   movingPlayer: null,
   importedProblems: null,
   problemPool: [],
-  usedProblemIds: new Set(),
+  correctlyAnsweredProblemIds: new Set(),
+  activeProblemId: null,
   config: {
     negativePointsEnabled: true,
     timerEnabled: false,

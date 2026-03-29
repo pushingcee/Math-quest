@@ -52,7 +52,7 @@ export class BoardSystem {
           difficulty,
           problems ?? null,
           poolState.pool,
-          poolState.usedIds
+          new Set()
         );
         poolState = result.newPoolState;
 

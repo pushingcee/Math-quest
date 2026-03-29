@@ -20,7 +20,7 @@ export function startIdleAnimation(
   };
 
   ticker.add(tick);
-  return () => ticker.remove(tick);
+  return () => { try { ticker.remove(tick); } catch { /* ticker already destroyed */ } };
 }
 
 /**
@@ -110,7 +110,7 @@ export function startGlowPulse(
   };
 
   ticker.add(tick);
-  return () => ticker.remove(tick);
+  return () => { try { ticker.remove(tick); } catch { /* ticker already destroyed */ } };
 }
 
 function easeOutCubic(t: number): number {

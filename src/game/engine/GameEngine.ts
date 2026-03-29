@@ -139,7 +139,7 @@ export class GameEngine {
     const tiles = BoardSystem.createBoard(boardConfig, this.state.importedProblems || undefined);
 
     // Initialize problem pool
-    const { pool, usedIds } = ProblemSystem.initializeProblemPool(this.state.importedProblems || null);
+    const { pool } = ProblemSystem.initializeProblemPool(this.state.importedProblems || null);
 
     // Build board graph (doubly-linked tile structure).
     // Uses a default pixel size — the rendering layer will rebuild
@@ -156,7 +156,8 @@ export class GameEngine {
       movesInRound: 0,
       diceValue: 0,
       problemPool: pool,
-      usedProblemIds: usedIds,
+      correctlyAnsweredProblemIds: new Set(),
+      activeProblemId: null,
       message: null,
       bannerMessage: null,
       mathProblem: null,
@@ -381,7 +382,7 @@ export class GameEngine {
     }
 
     // Math problem tile
-    if (tile.difficulty && tile.points && tile.question !== undefined && tile.answer !== undefined) {
+    if (tile.difficulty && tile.points && (tile.question !== undefined || this.state.importedProblems)) {
       const multiplier = tile.pointsMultiplier ?? 1;
       const finalPoints = tile.points * multiplier;
 
@@ -394,7 +395,13 @@ export class GameEngine {
         });
       }
 
-      this.showMathProblem(tile.difficulty, finalPoints, tile.question, tile.answer);
+      // When imported problems are in use, always serve from the pool so
+      // correctly-answered problems are tracked and discarded properly.
+      if (this.state.importedProblems) {
+        this.showMathProblem(tile.difficulty, finalPoints);
+      } else {
+        this.showMathProblem(tile.difficulty, finalPoints, tile.question, tile.answer);
+      }
       return TileLandingResult.Math;
     }
 
@@ -416,12 +423,12 @@ export class GameEngine {
         difficulty,
         this.state.importedProblems,
         this.state.problemPool,
-        this.state.usedProblemIds
+        this.state.correctlyAnsweredProblemIds
       );
       problem = result.problem;
       this.setState({
         problemPool: result.newPoolState.pool,
-        usedProblemIds: result.newPoolState.usedIds
+        activeProblemId: result.activeProblemId,
       });
     }
 
@@ -455,7 +462,35 @@ export class GameEngine {
     updatedPlayer = PlayerSystem.updatePlayerStreak(updatedPlayer, result.newStreak);
     updatedPlayer = ItemSystem.awardCoins(updatedPlayer, result.coinReward);
 
+    // Update problem pool based on correctness
+    const { activeProblemId, importedProblems, correctlyAnsweredProblemIds, problemPool } = this.state;
+    let poolUpdate: Partial<GameState> = { activeProblemId: null };
+
+    if (activeProblemId !== null) {
+      if (result.correct) {
+        const newCorrectIds = new Set(correctlyAnsweredProblemIds).add(activeProblemId);
+        poolUpdate.correctlyAnsweredProblemIds = newCorrectIds;
+        // All problems correctly answered → game over
+        if (importedProblems && newCorrectIds.size === importedProblems.problems.length) {
+          this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
+            mathProblem: null,
+            activeProblemId: null,
+            correctlyAnsweredProblemIds: newCorrectIds,
+            screen: GameScreen.GameOver,
+          });
+          return result.correct;
+        }
+      } else {
+        // Return problem to pool so it can reappear
+        const sourceProblem = importedProblems?.problems.find(p => p.id === activeProblemId);
+        if (sourceProblem) {
+          poolUpdate.problemPool = [...problemPool, sourceProblem];
+        }
+      }
+    }
+
     this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
+      ...poolUpdate,
       mathProblem: null,
       message: {
         text: result.message,
@@ -488,7 +523,18 @@ export class GameEngine {
     let updatedPlayer = ScoringSystem.applyScoreChange(player, result.scoreChange);
     updatedPlayer = PlayerSystem.updatePlayerStreak(updatedPlayer, 0);
 
+    // Return timed-out problem to pool so it can reappear
+    const { activeProblemId, importedProblems, problemPool } = this.state;
+    let poolUpdate: Partial<GameState> = { activeProblemId: null };
+    if (activeProblemId !== null) {
+      const sourceProblem = importedProblems?.problems.find(p => p.id === activeProblemId);
+      if (sourceProblem) {
+        poolUpdate.problemPool = [...problemPool, sourceProblem];
+      }
+    }
+
     this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
+      ...poolUpdate,
       mathProblem: null,
       message: {
         text: result.message,
@@ -527,7 +573,9 @@ export class GameEngine {
       this.state.config.maxRounds
     );
 
-    if (result.shouldEndGame) {
+    // With imported problems, the game ends only when all are answered correctly —
+    // ignore the round-based end condition.
+    if (result.shouldEndGame && !this.state.importedProblems) {
       this.setState({ screen: GameScreen.GameOver });
       return;
     }

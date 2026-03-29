@@ -4,7 +4,6 @@ import { generateMathProblem, GeneratedProblem } from '../utils/mathGenerator';
 
 export interface ProblemPoolState {
   pool: ImportedProblem[];
-  usedIds: Set<number>;
 }
 
 export class ProblemSystem {
@@ -15,8 +14,8 @@ export class ProblemSystem {
     difficulty: Difficulty,
     importedProblems: ImportedProblemsData | null,
     currentPool: ImportedProblem[],
-    usedIds: Set<number>
-  ): { problem: GeneratedProblem; newPoolState: ProblemPoolState } {
+    correctlyAnsweredIds: Set<number>
+  ): { problem: GeneratedProblem; activeProblemId: number | null; newPoolState: ProblemPoolState } {
     // Use imported problems if available
     if (importedProblems && currentPool.length > 0) {
       // Get a random problem from the pool
@@ -27,30 +26,28 @@ export class ProblemSystem {
       const newPool = [...currentPool];
       newPool.splice(randomIndex, 1);
 
-      // Add to used set
-      const newUsedIds = new Set(usedIds).add(importedProblem.id);
-
-      // If pool is empty, refill it (excluding just-used problems for variety)
-      if (newPool.length === 0 && importedProblems.problems.length > 1) {
+      // If pool is empty, refill it excluding correctly answered problems
+      if (newPool.length === 0) {
         const availableProblems = importedProblems.problems.filter(
-          p => p.id !== importedProblem.id
+          p => !correctlyAnsweredIds.has(p.id) && p.id !== importedProblem.id
         );
         newPool.push(...availableProblems);
-        console.log('Problem pool refilled');
+        if (newPool.length > 0) {
+          console.log('Problem pool refilled');
+        }
       }
 
       // Parse answer as number (remove spaces first, e.g., "1 055" -> "1055")
       const answer = parseFloat(importedProblem.answer.trim().replace(/\s+/g, ''));
 
-      console.log('Using imported problem:', importedProblem);
       return {
         problem: {
           question: importedProblem.question.trim(),
           answer: isNaN(answer) ? 0 : answer
         },
+        activeProblemId: importedProblem.id,
         newPoolState: {
           pool: newPool,
-          usedIds: newUsedIds
         }
       };
     }
@@ -58,9 +55,9 @@ export class ProblemSystem {
     // Fall back to generated problems
     return {
       problem: generateMathProblem(difficulty),
+      activeProblemId: null,
       newPoolState: {
         pool: currentPool,
-        usedIds
       }
     };
   }
@@ -71,7 +68,6 @@ export class ProblemSystem {
   static initializeProblemPool(importedProblems: ImportedProblemsData | null): ProblemPoolState {
     return {
       pool: importedProblems ? [...importedProblems.problems] : [],
-      usedIds: new Set()
     };
   }
 }

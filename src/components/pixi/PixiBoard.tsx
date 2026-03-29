@@ -63,7 +63,7 @@ function FpsCounter({ x, y }: { x: number; y: number }) {
       }
     };
     ticker.add(tick);
-    return () => { ticker.remove(tick); };
+    return () => { try { ticker.remove(tick); } catch { /* ticker already destroyed */ } };
   }, [app?.ticker]);
 
   return (
@@ -101,11 +101,15 @@ function PixiBoardContent({
   // on pointer events, which would cancel the browser's zoom gesture.
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (app?.canvas) {
-        (app.canvas as HTMLCanvasElement).style.touchAction = 'manipulation';
-      }
-      if (app?.renderer?.events) {
-        (app.renderer.events as unknown as { autoPreventDefault: boolean }).autoPreventDefault = false;
+      try {
+        if (app?.canvas) {
+          (app.canvas as HTMLCanvasElement).style.touchAction = 'manipulation';
+        }
+        if (app?.renderer?.events) {
+          (app.renderer.events as unknown as { autoPreventDefault: boolean }).autoPreventDefault = false;
+        }
+      } catch {
+        // app was destroyed before the timer fired — nothing to do
       }
     }, 500);
     return () => clearTimeout(timer);
