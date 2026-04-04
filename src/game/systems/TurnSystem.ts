@@ -26,6 +26,8 @@ export class TurnSystem {
     let finalMovesInRound = newMovesInRound;
     let roundCompleted = false;
 
+    const nextPlayer = (currentPlayer + 1) % totalPlayers;
+
     // Check if round is complete
     if (newMovesInRound >= totalPlayers) {
       newRound = round + 1;
@@ -36,7 +38,7 @@ export class TurnSystem {
       if (newRound > maxRounds) {
         return {
           newState: {
-            currentPlayer,
+            currentPlayer: nextPlayer,
             round: newRound,
             movesInRound: finalMovesInRound
           },
@@ -45,8 +47,6 @@ export class TurnSystem {
         };
       }
     }
-
-    const nextPlayer = (currentPlayer + 1) % totalPlayers;
 
     return {
       newState: {
