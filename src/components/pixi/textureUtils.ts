@@ -7,19 +7,41 @@ import { colorizePlayerSprite } from '@/game/utils/svgColorizer';
 
 const textureCache = new Map<string, Texture>();
 
+// Rasterization size for player sprite textures (2x the 64px on-board token
+// size, so tokens stay crisp on high-DPI screens).
+const SPRITE_TEXTURE_SIZE = 128;
+
 /**
- * Load an SVG string into an HTMLImageElement, then create a PixiJS Texture from it.
+ * Load an SVG string into an HTMLImageElement, rasterize it onto a canvas,
+ * then create a PixiJS Texture from the canvas.
+ *
+ * The SVG must be given explicit pixel dimensions and go through a 2D canvas:
+ * uploading an SVG-backed <img> with no intrinsic size directly to WebGL
+ * fails on Firefox and Android WebView/Chrome, rendering as a black square.
  */
 function loadSvgAsTexture(svgString: string): Promise<Texture> {
+  const sizedSvg = svgString.replace(
+    /<svg([^>]*)>/,
+    `<svg$1 width="${SPRITE_TEXTURE_SIZE}" height="${SPRITE_TEXTURE_SIZE}">`
+  );
+
   return new Promise((resolve, reject) => {
-    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const blob = new Blob([sizedSvg], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const img = new Image();
 
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const texture = Texture.from(img);
-      resolve(texture);
+      const canvas = document.createElement('canvas');
+      canvas.width = SPRITE_TEXTURE_SIZE;
+      canvas.height = SPRITE_TEXTURE_SIZE;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get 2D context for sprite rasterization'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, SPRITE_TEXTURE_SIZE, SPRITE_TEXTURE_SIZE);
+      resolve(Texture.from(canvas));
     };
 
     img.onerror = (err) => {
