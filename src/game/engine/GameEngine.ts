@@ -550,7 +550,8 @@ export class GameEngine {
         text: result.message,
         type: MessageType.Error,
         streak: 0,
-        problem: this.state.mathProblem.question
+        problem: this.state.mathProblem.question,
+        isTimeout: true
       }
     });
   }

@@ -15,6 +15,7 @@ interface MessageModalProps {
   autoClose?: boolean;
   problem?: string;
   userAnswer?: number;
+  isTimeout?: boolean;
 }
 
 const wrongAnswerEmojis = [
@@ -58,7 +59,7 @@ const correctAnswerEmojis = [
   '✨', // Sparkles
 ];
 
-export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true, problem, userAnswer }: MessageModalProps) {
+export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true, problem, userAnswer, isTimeout = false }: MessageModalProps) {
   const { language } = useLanguage();
   const mathRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +131,7 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
         <div className={`text-2xl font-bold ${
           type === 'success' ? 'text-green-600' : 'text-red-600'
         }`}>
-          {type === 'success' ? t(language, 'correctAnswer') : message.includes('ran out of time') ? t(language, 'timesUp') : t(language, 'wrongAnswer')}
+          {type === 'success' ? t(language, 'correctAnswer') : isTimeout ? t(language, 'timesUp') : t(language, 'wrongAnswer')}
         </div>
         {problem && (
           <div className="my-4 flex items-center justify-center gap-2 text-xl font-semibold text-gray-700">

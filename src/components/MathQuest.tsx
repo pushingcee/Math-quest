@@ -580,6 +580,7 @@ export default function MathQuest() {
           streak={gameState.message?.streak}
           problem={gameState.message?.problem}
           userAnswer={gameState.message?.userAnswer}
+          isTimeout={gameState.message?.isTimeout}
           onClose={handleCloseMessage}
           autoClose={gameState.config.autoCloseModal}
         />

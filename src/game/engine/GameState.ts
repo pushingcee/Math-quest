@@ -21,6 +21,8 @@ export interface GameMessage {
   streak?: number;
   problem?: string;
   userAnswer?: number;
+  /** True when the message was caused by the answer timer running out */
+  isTimeout?: boolean;
 }
 
 export interface BannerMessage {
