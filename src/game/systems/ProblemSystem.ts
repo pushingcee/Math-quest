@@ -32,9 +32,6 @@ export class ProblemSystem {
           p => !correctlyAnsweredIds.has(p.id) && p.id !== importedProblem.id
         );
         newPool.push(...availableProblems);
-        if (newPool.length > 0) {
-          console.log('Problem pool refilled');
-        }
       }
 
       // Parse answer as number (remove spaces first, e.g., "1 055" -> "1055")

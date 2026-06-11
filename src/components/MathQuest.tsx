@@ -221,12 +221,9 @@ export default function MathQuest() {
   }, [engine, language]);
 
   const handleRollDice = useCallback(() => {
-    console.log('🎲 handleRollDice called', { suppressDiceSound, lastRollWasLuckyDice: gameState.lastRollWasLuckyDice });
-
     // Check if player has Lucky Dice item to use
     const hasLuckyDice = engine.checkForDiceItem();
     if (hasLuckyDice) {
-      console.log('Lucky Dice item found, returning early');
       return; // Wait for item prompt response
     }
 
@@ -235,13 +232,10 @@ export default function MathQuest() {
 
     // Play dice sound only if not suppressed and not a Lucky Dice result
     if (!suppressDiceSound && !gameState.lastRollWasLuckyDice && diceAudioRef.current.length > 0) {
-      console.log('🔊 Playing dice sound');
       const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
       const audio = diceAudioRef.current[randomIndex];
       audio.currentTime = 0;
-      audio.play().catch(e => console.log('Audio play failed:', e));
-    } else {
-      console.log('🔇 Sound suppressed', { suppressDiceSound, lastRollWasLuckyDice: gameState.lastRollWasLuckyDice });
+      audio.play().catch(() => { /* autoplay blocked — not critical */ });
     }
 
     // Complete dice roll after animation
@@ -263,7 +257,7 @@ export default function MathQuest() {
       if (chimeAudioRef.current) {
         const chime = chimeAudioRef.current.cloneNode() as HTMLAudioElement;
         chime.playbackRate = 0.95 + Math.random() * 0.1;
-        chime.play().catch(e => console.log('Audio play failed:', e));
+        chime.play().catch(() => { /* autoplay blocked — not critical */ });
       }
 
       // Play celebration sound on streak
@@ -273,7 +267,7 @@ export default function MathQuest() {
         const randomIndex = Math.floor(Math.random() * yayAudioRef.current.length);
         const audio = yayAudioRef.current[randomIndex];
         audio.currentTime = 0;
-        audio.play().catch(e => console.log('Audio play failed:', e));
+        audio.play().catch(() => { /* autoplay blocked — not critical */ });
       }
     }
   }, [engine, language]);
