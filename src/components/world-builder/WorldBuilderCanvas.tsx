@@ -9,7 +9,8 @@ import {
   FederatedPointerEvent,
 } from 'pixi.js';
 import { EditorState, EditorTile, DragState, GroupOffset } from './worldBuilderTypes';
-import { TILE_GAP, BOARD_WORLD_SIZE as WORLD_SIZE } from '@/game/board/BoardLayout';
+import { buildOccupiedMap } from './gridUtils';
+import { TILE_GAP, BOARD_WORLD_SIZE as WORLD_SIZE, gridCellRect } from '@/game/board/BoardLayout';
 
 extend({ Container, Graphics: PixiGraphics, Text: PixiText });
 
@@ -54,13 +55,8 @@ function buildLayoutMap(tiles: EditorTile[], gridCols: number, gridRows: number)
   const map = new Map<string, { x: number; y: number; w: number; h: number; cx: number; cy: number }>();
   const gridMax = Math.max(gridCols, gridRows);
   const cellSize = WORLD_SIZE / gridMax;
-  const halfGap = TILE_GAP / 2;
   for (const t of tiles) {
-    const span = t.span ?? 1;
-    const w = cellSize * span - TILE_GAP;
-    const h = cellSize * span - TILE_GAP;
-    const x = (t.col - 1) * cellSize + halfGap;
-    const y = (t.row - 1) * cellSize + halfGap;
+    const { x, y, width: w, height: h } = gridCellRect(t.row, t.col, t.span ?? 1, cellSize);
     map.set(t.id, { x, y, w, h, cx: x + w / 2, cy: y + h / 2 });
   }
   return { map, cellSize };
@@ -150,17 +146,7 @@ function WorldBuilderCanvasContent({
   );
 
   // Build occupied-cell lookup map (O(1) hit detection)
-  const occupiedMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const t of tiles) {
-      for (let dr = 0; dr < t.span; dr++) {
-        for (let dc = 0; dc < t.span; dc++) {
-          m.set(`${t.row + dr},${t.col + dc}`, t.id);
-        }
-      }
-    }
-    return m;
-  }, [tiles]);
+  const occupiedMap = useMemo(() => buildOccupiedMap(tiles), [tiles]);
 
   // Grid coordinates from PixiJS local position
   const localToGrid = useCallback(

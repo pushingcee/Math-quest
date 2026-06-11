@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { EditorTile, EditorState, PaletteType, GroupOffset } from './worldBuilderTypes';
+import { buildOccupiedMap } from './gridUtils';
 import { BoardConfigLoader } from '@/game/board/BoardConfigLoader';
 import { TileConfig, BoardConfig } from '@/game/board/BoardConfig';
 import defaultBoardJson from '@/game/board/boards/default.board.json';
@@ -35,27 +36,6 @@ export function editorTileToTileConfig(t: EditorTile): TileConfig {
   if (t.onLand) cfg.onLand = t.onLand;
   if (t.modifierEffect) cfg.modifierEffect = t.modifierEffect;
   return cfg;
-}
-
-/** Build a set of all grid cells occupied by a tile (for collision checking). */
-function occupiedKeys(t: EditorTile): string[] {
-  const keys: string[] = [];
-  for (let dr = 0; dr < t.span; dr++) {
-    for (let dc = 0; dc < t.span; dc++) {
-      keys.push(`${t.row + dr},${t.col + dc}`);
-    }
-  }
-  return keys;
-}
-
-function buildOccupiedMap(tiles: EditorTile[]): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const t of tiles) {
-    for (const key of occupiedKeys(t)) {
-      map.set(key, t.id);
-    }
-  }
-  return map;
 }
 
 function isColliding(
