@@ -14,21 +14,24 @@ interface ProblemUploadProps {
 export default function ProblemUpload({ provider, onLoaded }: ProblemUploadProps) {
   const { language } = useLanguage();
   const [fileName, setFileName] = useState('');
-  const [problemCount, setProblemCount] = useState('');
+  const [problemCount, setProblemCount] = useState(0);
   const [error, setError] = useState('');
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setFileName(file.name);
     setError('');
 
     try {
       const data = await provider.loadFromFile(file);
-      setProblemCount(data.problemCount);
+      setFileName(file.name);
+      setProblemCount(data.problems.length);
       onLoaded(data);
     } catch (err) {
+      // Clear any previous success state so it doesn't show next to the error
+      setFileName('');
+      setProblemCount(0);
       setError('Invalid JSON file. Please check the format.');
       console.error('JSON parse error:', err);
     }
