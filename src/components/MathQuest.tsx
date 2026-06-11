@@ -138,37 +138,23 @@ export default function MathQuest() {
     }
   }, [gameState.currentPlayer, gameState.players, gameState.teleporterActive, gameState.pendingItemUse, gameState.isRolling, gameState.movingPlayer, engine]);
 
-  // Helper to get audio path
-  const getAudioPath = useCallback((filename: string) => {
-    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/Math-quest')) {
-      return `/Math-quest/${filename}`;
-    }
-    return `/${filename}`;
-  }, []);
-
   // Preload audio
   useEffect(() => {
-    const diceSounds = ['dr2.mp3', 'dr3.mp3', 'dr4.mp3', 'dr5.mp3'];
-    diceAudioRef.current = diceSounds.map(sound => {
-      const audio = new Audio(getAudioPath(sound));
+    const loadAudio = (filename: string) => {
+      const audio = new Audio(assetPath(`/${filename}`));
       audio.preload = 'auto';
       audio.load();
       return audio;
-    });
+    };
+
+    const diceSounds = ['dr2.mp3', 'dr3.mp3', 'dr4.mp3', 'dr5.mp3'];
+    diceAudioRef.current = diceSounds.map(loadAudio);
 
     const yaySounds = ['yay1.mp3', 'yay2.mp3', 'yay3.mp3', 'yay4.mp3', 'yay5.mp3'];
-    yayAudioRef.current = yaySounds.map(sound => {
-      const audio = new Audio(getAudioPath(sound));
-      audio.preload = 'auto';
-      audio.load();
-      return audio;
-    });
+    yayAudioRef.current = yaySounds.map(loadAudio);
 
-    const chimeAudio = new Audio(getAudioPath('chime.mp3'));
-    chimeAudio.preload = 'auto';
-    chimeAudio.load();
-    chimeAudioRef.current = chimeAudio;
-  }, [getAudioPath]);
+    chimeAudioRef.current = loadAudio('chime.mp3');
+  }, []);
 
   // ===== EVENT HANDLERS =====
 
