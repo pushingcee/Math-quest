@@ -20,17 +20,19 @@ export class ScoringSystem {
     points: number,
     currentStreak: number,
     negativePointsEnabled: boolean,
-    language: Language = 'en'
+    language: Language = 'en',
+    bonusMultiplier: number = 1
   ): AnswerResult {
     const correct = userAnswer === correctAnswer;
 
     if (correct) {
+      const earnedPoints = Math.round(points * bonusMultiplier);
       return {
         correct: true,
-        scoreChange: points,
+        scoreChange: earnedPoints,
         coinReward: 15,
         newStreak: currentStreak + 1,
-        message: t(language, 'pointsGained', { points })
+        message: t(language, 'pointsGained', { points: earnedPoints })
       };
     } else {
       return {

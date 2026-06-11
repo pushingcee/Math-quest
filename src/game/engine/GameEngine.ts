@@ -17,6 +17,9 @@ import defaultBoardJson from '../board/boards/default.board.json';
 
 const defaultBoard = BoardConfigLoader.parse(defaultBoardJson);
 
+/** Score multiplier applied by the Point Booster item on correct answers */
+const POINT_BOOSTER_MULTIPLIER = 1.5;
+
 export type StateChangeListener = (state: GameState) => void;
 
 export class GameEngine {
@@ -448,19 +451,26 @@ export class GameEngine {
     const player = this.state.players[this.state.currentPlayer];
     if (!player) return false;
 
+    // Point Booster boosts earned points on correct answers; one use per correct answer
+    const hasPointBooster = ItemSystem.hasItem(player, ItemType.PointMultiplier);
+
     const result = ScoringSystem.calculateAnswerResult(
       userAnswer,
       this.state.mathProblem.answer,
       this.state.mathProblem.points,
       player.streak || 0,
       this.state.config.negativePointsEnabled,
-      language
+      language,
+      hasPointBooster ? POINT_BOOSTER_MULTIPLIER : 1
     );
 
     // Update player
     let updatedPlayer = ScoringSystem.applyScoreChange(player, result.scoreChange);
     updatedPlayer = PlayerSystem.updatePlayerStreak(updatedPlayer, result.newStreak);
     updatedPlayer = ItemSystem.awardCoins(updatedPlayer, result.coinReward);
+    if (result.correct && hasPointBooster) {
+      updatedPlayer = ItemSystem.useItem(updatedPlayer, ItemType.PointMultiplier);
+    }
 
     // Update problem pool based on correctness
     const { activeProblemId, importedProblems, correctlyAnsweredProblemIds, problemPool } = this.state;
