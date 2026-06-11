@@ -58,21 +58,4 @@ export class TurnSystem {
       roundCompleted
     };
   }
-
-  /**
-   * Get dice label for current player
-   */
-  static getDiceLabel(playerName: string, hasRolled: boolean): string {
-    if (hasRolled) {
-      return `${playerName} rolled!`;
-    }
-    return `${playerName}'s turn - Click to Roll!`;
-  }
-
-  /**
-   * Check if it's a new game (first turn)
-   */
-  static isFirstTurn(round: number, movesInRound: number): boolean {
-    return round === 1 && movesInRound === 0;
-  }
 }

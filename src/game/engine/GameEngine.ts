@@ -10,12 +10,16 @@ import { TurnSystem } from '../systems/TurnSystem';
 import { ObstacleSystem } from '../systems/ObstacleSystem';
 import { ItemSystem } from '../systems/ItemSystem';
 import { ItemType } from '@/types/items';
-import { Language } from '@/i18n/translations';
+import { Language, t } from '@/i18n/translations';
 import { BoardGraph } from '../board/BoardGraph';
+import { BOARD_WORLD_SIZE } from '../board/BoardLayout';
 import { BoardConfigLoader } from '../board/BoardConfigLoader';
 import defaultBoardJson from '../board/boards/default.board.json';
 
 const defaultBoard = BoardConfigLoader.parse(defaultBoardJson);
+
+/** Score multiplier applied by the Point Booster item on correct answers */
+const POINT_BOOSTER_MULTIPLIER = 1.5;
 
 export type StateChangeListener = (state: GameState) => void;
 
@@ -141,11 +145,10 @@ export class GameEngine {
     // Initialize problem pool
     const { pool } = ProblemSystem.initializeProblemPool(this.state.importedProblems || null);
 
-    // Build board graph (doubly-linked tile structure).
-    // Uses a default pixel size — the rendering layer will rebuild
-    // at the actual viewport size. This instance is for game logic only.
-    this._boardGraph = BoardGraph.fromLayout(863, tiles, boardConfig);
-    this._boardGraph.syncSlotsFromPlayers(players);
+    // Build board graph (doubly-linked tile structure). This instance
+    // drives game logic (traversal); the rendering layer builds its own
+    // for layout and pawn-slot placement.
+    this._boardGraph = BoardGraph.fromLayout(BOARD_WORLD_SIZE, tiles, boardConfig);
 
     this.setState({
       screen: GameScreen.Playing,
@@ -292,11 +295,6 @@ export class GameEngine {
 
     const newPosition = nextTile.index;
 
-    // Update pawn slots
-    const oldTile = this._boardGraph.getTileByIndex(oldPosition);
-    if (oldTile) this._boardGraph.releaseSlot(oldTile.id, playerId);
-    this._boardGraph.claimSlot(nextTile.id, playerId);
-
     this.updatePlayer(playerId, { ...player, position: newPosition });
 
     // Detect crossing START: the head of the chain is the first tile
@@ -315,11 +313,11 @@ export class GameEngine {
   /**
    * Handle passing START bonus
    */
-  applyPassStartBonus(playerId: number) {
+  applyPassStartBonus(playerId: number, language: Language = 'en') {
     const player = this.state.players[playerId];
     if (!player) return;
 
-    const { scoreChange, coinReward, message } = ScoringSystem.calculatePassStartBonus();
+    const { scoreChange, coinReward, message } = ScoringSystem.calculatePassStartBonus(language);
     let updatedPlayer = ScoringSystem.applyScoreChange(player, scoreChange);
     updatedPlayer = ItemSystem.awardCoins(updatedPlayer, coinReward);
 
@@ -333,7 +331,7 @@ export class GameEngine {
   /**
    * Handle landing on a tile
    */
-  handleTileLanding(position: number, playerId: number): TileLandingResult {
+  handleTileLanding(position: number, playerId: number, language: Language = 'en'): TileLandingResult {
     const tile = this.state.tiles.find(t => t.index === position);
     if (!tile) return TileLandingResult.Next;
 
@@ -350,7 +348,8 @@ export class GameEngine {
         const { player: updatedPlayer, message } = ObstacleSystem.applyObstacleEffect(
           player,
           tile.obstacleType,
-          this._boardGraph
+          this._boardGraph,
+          language
         );
 
         this.updatePlayer(playerId, updatedPlayer, {
@@ -389,7 +388,7 @@ export class GameEngine {
       if (multiplier > 1) {
         this.setState({
           bannerMessage: {
-            text: 'BONUS! Your next correct answer worth double!',
+            text: t(language, 'bonusDoublePoints'),
             type: MessageType.Success
           }
         });
@@ -440,6 +439,24 @@ export class GameEngine {
   }
 
   /**
+   * Build the state update that returns the active (unanswered) problem
+   * to the pool so it can reappear, clearing the active id.
+   */
+  private returnActiveProblemToPool(): Partial<GameState> {
+    const { activeProblemId, importedProblems, problemPool } = this.state;
+    const update: Partial<GameState> = { activeProblemId: null };
+
+    if (activeProblemId !== null) {
+      const sourceProblem = importedProblems?.problems.find(p => p.id === activeProblemId);
+      if (sourceProblem) {
+        update.problemPool = [...problemPool, sourceProblem];
+      }
+    }
+
+    return update;
+  }
+
+  /**
    * Submit an answer
    */
   submitAnswer(userAnswer: number, language: Language = 'en'): boolean {
@@ -448,22 +465,29 @@ export class GameEngine {
     const player = this.state.players[this.state.currentPlayer];
     if (!player) return false;
 
+    // Point Booster boosts earned points on correct answers; one use per correct answer
+    const hasPointBooster = ItemSystem.hasItem(player, ItemType.PointMultiplier);
+
     const result = ScoringSystem.calculateAnswerResult(
       userAnswer,
       this.state.mathProblem.answer,
       this.state.mathProblem.points,
       player.streak || 0,
       this.state.config.negativePointsEnabled,
-      language
+      language,
+      hasPointBooster ? POINT_BOOSTER_MULTIPLIER : 1
     );
 
     // Update player
     let updatedPlayer = ScoringSystem.applyScoreChange(player, result.scoreChange);
     updatedPlayer = PlayerSystem.updatePlayerStreak(updatedPlayer, result.newStreak);
     updatedPlayer = ItemSystem.awardCoins(updatedPlayer, result.coinReward);
+    if (result.correct && hasPointBooster) {
+      updatedPlayer = ItemSystem.useItem(updatedPlayer, ItemType.PointMultiplier);
+    }
 
     // Update problem pool based on correctness
-    const { activeProblemId, importedProblems, correctlyAnsweredProblemIds, problemPool } = this.state;
+    const { activeProblemId, importedProblems, correctlyAnsweredProblemIds } = this.state;
     let poolUpdate: Partial<GameState> = { activeProblemId: null };
 
     if (activeProblemId !== null) {
@@ -481,11 +505,7 @@ export class GameEngine {
           return result.correct;
         }
       } else {
-        // Return problem to pool so it can reappear
-        const sourceProblem = importedProblems?.problems.find(p => p.id === activeProblemId);
-        if (sourceProblem) {
-          poolUpdate.problemPool = [...problemPool, sourceProblem];
-        }
+        poolUpdate = this.returnActiveProblemToPool();
       }
     }
 
@@ -523,24 +543,16 @@ export class GameEngine {
     let updatedPlayer = ScoringSystem.applyScoreChange(player, result.scoreChange);
     updatedPlayer = PlayerSystem.updatePlayerStreak(updatedPlayer, 0);
 
-    // Return timed-out problem to pool so it can reappear
-    const { activeProblemId, importedProblems, problemPool } = this.state;
-    let poolUpdate: Partial<GameState> = { activeProblemId: null };
-    if (activeProblemId !== null) {
-      const sourceProblem = importedProblems?.problems.find(p => p.id === activeProblemId);
-      if (sourceProblem) {
-        poolUpdate.problemPool = [...problemPool, sourceProblem];
-      }
-    }
-
     this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
-      ...poolUpdate,
+      // Return the timed-out problem to the pool so it can reappear
+      ...this.returnActiveProblemToPool(),
       mathProblem: null,
       message: {
         text: result.message,
         type: MessageType.Error,
         streak: 0,
-        problem: this.state.mathProblem.question
+        problem: this.state.mathProblem.question,
+        isTimeout: true
       }
     });
   }
@@ -644,19 +656,6 @@ export class GameEngine {
   }
 
   // ===== ITEM USAGE ACTIONS =====
-
-  /**
-   * Prompt player to use an item
-   */
-  promptItemUse(itemType: ItemType, context: 'obstacle' | 'dice' | 'math' | 'teleport') {
-    this.setState({
-      pendingItemUse: {
-        playerId: this.state.currentPlayer,
-        itemType,
-        context,
-      },
-    });
-  }
 
   /**
    * Use an item

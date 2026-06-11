@@ -71,31 +71,3 @@ export async function getPlayerTexture(
   textureCache.set(key, texture);
   return texture;
 }
-
-/**
- * Preload textures for all players at game start.
- */
-export async function preloadPlayerTextures(
-  players: { avatarIndex: number; color: string }[]
-): Promise<Map<string, Texture>> {
-  const results = new Map<string, Texture>();
-
-  await Promise.all(
-    players.map(async (p) => {
-      const texture = await getPlayerTexture(p.avatarIndex, p.color);
-      results.set(`player-${p.avatarIndex}-${p.color}`, texture);
-    })
-  );
-
-  return results;
-}
-
-/**
- * Clean up all cached textures. Call on unmount.
- */
-export function destroyTextureCache(): void {
-  textureCache.forEach((texture) => {
-    texture.destroy(true);
-  });
-  textureCache.clear();
-}

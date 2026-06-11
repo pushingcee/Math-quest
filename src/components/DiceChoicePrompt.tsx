@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
 
 interface DiceChoicePromptProps {
@@ -38,7 +38,7 @@ export default function DiceChoicePrompt({ isOpen, onChoose }: DiceChoicePromptP
           const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
           const audio = diceAudioRef.current[randomIndex];
           audio.currentTime = 0;
-          audio.play().catch(e => console.log('Audio play failed:', e));
+          audio.play().catch(() => { /* autoplay blocked — not critical */ });
         }
 
         const first = Math.floor(Math.random() * 6) + 1;
@@ -50,7 +50,7 @@ export default function DiceChoicePrompt({ isOpen, onChoose }: DiceChoicePromptP
             const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
             const audio = diceAudioRef.current[randomIndex];
             audio.currentTime = 0;
-            audio.play().catch(e => console.log('Audio play failed:', e));
+            audio.play().catch(() => { /* autoplay blocked — not critical */ });
           }
 
           const second = Math.floor(Math.random() * 6) + 1;

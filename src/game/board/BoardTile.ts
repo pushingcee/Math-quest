@@ -11,7 +11,6 @@ import { TileLayout } from './BoardLayout';
 export interface PawnSlot {
   localX: number; // offset from tile center
   localY: number;
-  playerId: number | null;
 }
 
 export interface BoardTileNode {
@@ -47,6 +46,5 @@ export function generatePawnSlots(
   return offsets.slice(0, maxSlots).map((o) => ({
     localX: o.x,
     localY: o.y,
-    playerId: null,
   }));
 }

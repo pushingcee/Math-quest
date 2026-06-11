@@ -1,7 +1,7 @@
 'use client';
 
 import { Player } from '@/types/game';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
 
 interface GameOverProps {

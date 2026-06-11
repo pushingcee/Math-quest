@@ -1,3 +1,5 @@
+// NOTE: Keep validation rules in sync with server/src/routes/validateProblems.ts
+// until a shared workspace package exists for them.
 import { ImportedProblemsData } from '@/types/imported-problems';
 
 export class ProblemValidationError extends Error {

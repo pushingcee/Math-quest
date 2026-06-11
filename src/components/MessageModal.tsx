@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useEffect, useRef } from 'react';
-import { MathRenderer } from '@jahnchock/math-to-latex';
-import 'katex/dist/katex.min.css';
-import { useLanguage } from '@/context/LanguageContext';
+import { useMemo, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
+import MathText from './MathText';
 
 interface MessageModalProps {
   isOpen: boolean;
@@ -15,6 +14,7 @@ interface MessageModalProps {
   autoClose?: boolean;
   problem?: string;
   userAnswer?: number;
+  isTimeout?: boolean;
 }
 
 const wrongAnswerEmojis = [
@@ -58,9 +58,8 @@ const correctAnswerEmojis = [
   '✨', // Sparkles
 ];
 
-export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true, problem, userAnswer }: MessageModalProps) {
+export default function MessageModal({ isOpen, message, type, onClose, streak = 0, autoClose = true, problem, userAnswer, isTimeout = false }: MessageModalProps) {
   const { language } = useLanguage();
-  const mathRef = useRef<HTMLDivElement>(null);
 
   // Pick a random emoji when modal opens
   const randomEmoji = useMemo(() => {
@@ -81,32 +80,6 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
       return Math.random() < 0.5 ? 'animate-shake' : '';
     }
   }, [isOpen, type, streak]);
-
-  // Render math problem with KaTeX
-  useEffect(() => {
-    if (mathRef.current && problem) {
-      // Check if problem starts with "tz" or "тз" (case insensitive)
-      const isPlainText = /^(tz|тз)/i.test(problem.trim());
-
-      if (isPlainText) {
-        // Display as plain text without KaTeX formatting, removing the "tz" or "тз" prefix
-        const textWithoutPrefix = problem.replace(/^(tz|тз)\s*/i, '');
-        mathRef.current.textContent = textWithoutPrefix;
-        mathRef.current.style.whiteSpace = 'normal';
-        mathRef.current.style.wordWrap = 'break-word';
-      } else {
-        try {
-          // Use MathRenderer to convert and render the math expression
-          const renderedHtml = MathRenderer.render(problem);
-          mathRef.current.innerHTML = renderedHtml;
-        } catch (error) {
-          console.error('KaTeX rendering error:', error);
-          // Fallback to plain text
-          mathRef.current.textContent = problem;
-        }
-      }
-    }
-  }, [problem]);
 
   // Auto-close after 2.5 seconds (if enabled)
   useEffect(() => {
@@ -130,14 +103,14 @@ export default function MessageModal({ isOpen, message, type, onClose, streak = 
         <div className={`text-2xl font-bold ${
           type === 'success' ? 'text-green-600' : 'text-red-600'
         }`}>
-          {type === 'success' ? t(language, 'correctAnswer') : message.includes('ran out of time') ? t(language, 'timesUp') : t(language, 'wrongAnswer')}
+          {type === 'success' ? t(language, 'correctAnswer') : isTimeout ? t(language, 'timesUp') : t(language, 'wrongAnswer')}
         </div>
         {problem && (
           <div className="my-4 flex items-center justify-center gap-2 text-xl font-semibold text-gray-700">
-            <div
-              ref={mathRef}
+            <MathText
+              text={problem}
               className="max-w-[350px] px-2 py-2 whitespace-normal break-words"
-            ></div>
+            />
             <span className="shrink-0">= ?</span>
           </div>
         )}

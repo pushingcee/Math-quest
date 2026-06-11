@@ -20,17 +20,19 @@ export class ScoringSystem {
     points: number,
     currentStreak: number,
     negativePointsEnabled: boolean,
-    language: Language = 'en'
+    language: Language = 'en',
+    bonusMultiplier: number = 1
   ): AnswerResult {
     const correct = userAnswer === correctAnswer;
 
     if (correct) {
+      const earnedPoints = Math.round(points * bonusMultiplier);
       return {
         correct: true,
-        scoreChange: points,
+        scoreChange: earnedPoints,
         coinReward: 15,
         newStreak: currentStreak + 1,
-        message: t(language, 'pointsGained', { points })
+        message: t(language, 'pointsGained', { points: earnedPoints })
       };
     } else {
       return {
@@ -68,11 +70,11 @@ export class ScoringSystem {
   /**
    * Calculate bonus for passing START
    */
-  static calculatePassStartBonus(): { scoreChange: number; coinReward: number; message: string } {
+  static calculatePassStartBonus(language: Language = 'en'): { scoreChange: number; coinReward: number; message: string } {
     return {
       scoreChange: TileScoring.PassStart.points,
       coinReward: 30,
-      message: TileScoring.PassStart.message
+      message: t(language, 'passedStart', { points: TileScoring.PassStart.points })
     };
   }
 

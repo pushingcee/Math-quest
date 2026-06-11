@@ -1,3 +1,5 @@
+// NOTE: Keep validation rules in sync with src/game/providers/validateProblems.ts
+// until a shared workspace package exists for them.
 export class ProblemValidationError extends Error {
   constructor(message: string) {
     super(message);

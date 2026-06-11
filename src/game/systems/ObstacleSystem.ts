@@ -3,6 +3,7 @@ import { ObstacleType } from '../constants/enums';
 import { ItemSystem } from './ItemSystem';
 import { ItemType } from '@/types/items';
 import { BoardGraph } from '../board/BoardGraph';
+import { Language, t } from '@/i18n/translations';
 
 export interface ObstacleResult {
   scoreChange: number;
@@ -14,7 +15,7 @@ export class ObstacleSystem {
   /**
    * Handle Slip Tile - Walk player back 3 spaces along the board graph
    */
-  static handleSlip(currentPosition: number, graph: BoardGraph | null): ObstacleResult {
+  static handleSlip(currentPosition: number, graph: BoardGraph | null, language: Language = 'en'): ObstacleResult {
     let newPosition = currentPosition;
 
     if (graph) {
@@ -28,19 +29,19 @@ export class ObstacleSystem {
     return {
       scoreChange: 0,
       newPosition,
-      message: '❄️ You hit an ice tile! Slipped back 3 spaces!'
+      message: t(language, 'slipMessage')
     };
   }
 
   /**
    * Handle Trap Tile - Deduct 15% of current score
    */
-  static handleTrap(currentPosition: number, currentScore: number): ObstacleResult {
+  static handleTrap(currentPosition: number, currentScore: number, language: Language = 'en'): ObstacleResult {
     const penalty = Math.floor(currentScore * 0.15);
     return {
       scoreChange: -penalty,
       newPosition: currentPosition,
-      message: `⚠️ You hit a trap! Lost 15% of your points (-${penalty} points)!`
+      message: t(language, 'trapMessage', { penalty })
     };
   }
 
@@ -50,24 +51,19 @@ export class ObstacleSystem {
   static applyObstacleEffect(
     player: Player,
     obstacleType: ObstacleType,
-    graph: BoardGraph | null
+    graph: BoardGraph | null,
+    language: Language = 'en'
   ): { player: Player; message: string } {
-    // Check if player has a Shield item
-    const hasShield = ItemSystem.hasItem(player, ItemType.Shield);
-    console.log(`🛡️ Shield check for ${player.name}: hasShield=${hasShield}, inventory=`, player.inventory);
-
-    if (hasShield) {
-      // Consume the Shield
-      const updatedPlayer = ItemSystem.useItem(player, ItemType.Shield);
-      console.log(`🛡️ Shield used! Remaining uses:`, updatedPlayer.inventory);
+    // A Shield absorbs the obstacle and is consumed
+    if (ItemSystem.hasItem(player, ItemType.Shield)) {
       return {
-        player: updatedPlayer,
-        message: '🛡️ Your Shield protected you from the obstacle!'
+        player: ItemSystem.useItem(player, ItemType.Shield),
+        message: t(language, 'shieldProtected')
       };
     }
 
     if (obstacleType === ObstacleType.Slip) {
-      const result = this.handleSlip(player.position, graph);
+      const result = this.handleSlip(player.position, graph, language);
       return {
         player: {
           ...player,
@@ -77,7 +73,7 @@ export class ObstacleSystem {
         message: result.message
       };
     } else if (obstacleType === ObstacleType.Trap) {
-      const result = this.handleTrap(player.position, player.score);
+      const result = this.handleTrap(player.position, player.score, language);
       return {
         player: {
           ...player,

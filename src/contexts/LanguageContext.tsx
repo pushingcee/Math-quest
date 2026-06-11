@@ -11,17 +11,13 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('bg');
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [language, setLanguageState] = useState<Language>('bg'); // Default to Bulgarian
 
   // Initialize from localStorage on client (after hydration)
   useEffect(() => {
-    setIsHydrated(true);
     const saved = localStorage.getItem('language') as Language | null;
     if (saved && (saved === 'bg' || saved === 'en')) {
       setLanguageState(saved);
-    } else {
-      setLanguageState('bg'); // Default to Bulgarian
     }
   }, []);
 

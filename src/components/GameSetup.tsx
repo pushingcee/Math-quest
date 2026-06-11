@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
-import { useLanguage } from '@/context/LanguageContext';
+import { GameSetupOptions } from '@/game/engine/GameState';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
 import LanguageSelector from './LanguageSelector';
 import { LocalUploadProvider } from '@/game/providers/LocalUploadProvider';
@@ -14,7 +15,7 @@ const FF_UPLOAD = process.env.NEXT_PUBLIC_FF_UPLOAD_PROBLEMS !== 'false';
 const FF_PERSISTED = process.env.NEXT_PUBLIC_FF_PERSISTED_PROBLEM_SETS === 'true';
 
 interface GameSetupProps {
-  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number, autoCloseModal?: boolean, displayProblemsInTiles?: boolean) => void;
+  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, options?: GameSetupOptions) => void;
 }
 
 const fieldStyle: React.CSSProperties = {
@@ -68,7 +69,6 @@ export default function GameSetup({ onStart }: GameSetupProps) {
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timerValue, setTimerValue] = useState<number | string>(30);
   const [autoCloseModal, setAutoCloseModal] = useState(false);
-  const [displayProblemsInTiles, setDisplayProblemsInTiles] = useState(false);
 
   const handleProblemsLoaded = (data: ImportedProblemsData) => {
     setImportedProblems(data);
@@ -79,7 +79,12 @@ export default function GameSetup({ onStart }: GameSetupProps) {
 
   const handleStart = () => {
     const validTimerValue = typeof timerValue === 'string' ? parseInt(timerValue) || 30 : timerValue;
-    onStart(playerCount, importedProblems || undefined, negativePoints, timerEnabled, validTimerValue, autoCloseModal, displayProblemsInTiles);
+    onStart(playerCount, importedProblems || undefined, {
+      negativePointsEnabled: negativePoints,
+      timerEnabled,
+      timerDuration: validTimerValue,
+      autoCloseModal,
+    });
   };
 
   return (
@@ -189,11 +194,7 @@ export default function GameSetup({ onStart }: GameSetupProps) {
           </div>
 
           {/* Auto-close modal */}
-          <label style={{
-            ...labelStyle,
-            padding: '0.75rem 1rem',
-            borderBottom: '1px solid var(--ed-border, #d4cfc7)',
-          }}>
+          <label style={{ ...labelStyle, padding: '0.75rem 1rem' }}>
             <input
               type="checkbox"
               checked={autoCloseModal}
@@ -201,17 +202,6 @@ export default function GameSetup({ onStart }: GameSetupProps) {
               style={{ accentColor: 'var(--ed-accent, #3730a3)', width: '16px', height: '16px', cursor: 'pointer' }}
             />
             <span>{t(language, 'enableModalAutoClose')}</span>
-          </label>
-
-          {/* Display problems in tiles */}
-          <label style={{ ...labelStyle, padding: '0.75rem 1rem' }}>
-            <input
-              type="checkbox"
-              checked={displayProblemsInTiles}
-              onChange={(e) => setDisplayProblemsInTiles(e.target.checked)}
-              style={{ accentColor: 'var(--ed-accent, #3730a3)', width: '16px', height: '16px', cursor: 'pointer' }}
-            />
-            <span>{t(language, 'displayProblemsInTiles')}</span>
           </label>
         </div>
       </div>

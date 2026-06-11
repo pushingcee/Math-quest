@@ -1,7 +1,6 @@
 import { Player } from '@/types/game';
 import { ItemSystem } from './ItemSystem';
-
-const playerColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'];
+import { PLAYER_COLOR_OPTIONS } from '@/game/constants/colors';
 
 export class PlayerSystem {
   /**
@@ -16,7 +15,7 @@ export class PlayerSystem {
         name: `Player ${i + 1}`,
         position: 0,
         score: 0,
-        color: colors[i] || playerColors[i], // Use selected color or fallback
+        color: colors[i] || PLAYER_COLOR_OPTIONS[i].hex, // Use selected color or fallback
         streak: 0,
         avatarIndex: avatarIndices[i],
         coins,

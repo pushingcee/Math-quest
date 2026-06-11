@@ -128,6 +128,10 @@ export const translations = {
     answerWas: 'Отговорът е {answer}.',
     ranOutOfTimeWithPenalty: '⏰ Времето изтече! Правилният отговор беше {answer}. -{points} точки!',
     ranOutOfTime: '⏰ Времето изтече! Правилният отговор беше {answer}.',
+    passedStart: 'Премина СТАРТ! +{points} точки!',
+    bonusDoublePoints: 'БОНУС! Следващият ти верен отговор носи двойни точки!',
+    slipMessage: '❄️ Стъпи на леден блок! Връщаш се 3 полета назад!',
+    trapMessage: '⚠️ Попадна в капан! Загуби 15% от точките си (-{penalty} точки)!',
 
     // Game Over
     gameOver: 'Край на играта',
@@ -268,6 +272,10 @@ export const translations = {
     answerWas: 'The answer was {answer}.',
     ranOutOfTimeWithPenalty: '⏰ You ran out of time! The correct answer was {answer}. -{points} points!',
     ranOutOfTime: '⏰ You ran out of time! The correct answer was {answer}.',
+    passedStart: 'Passed START! +{points} points!',
+    bonusDoublePoints: 'BONUS! Your next correct answer is worth double!',
+    slipMessage: '❄️ You hit an ice tile! Slipped back 3 spaces!',
+    trapMessage: '⚠️ You hit a trap! Lost 15% of your points (-{penalty} points)!',
 
     // Game Over
     gameOver: 'Game Over',
@@ -283,7 +291,9 @@ export const translations = {
   },
 };
 
-export function t(language: Language, key: keyof (typeof translations.en), variables?: Record<string, string | number>): string {
+export type TranslationKey = keyof (typeof translations.en);
+
+export function t(language: Language, key: TranslationKey, variables?: Record<string, string | number>): string {
   let text = translations[language][key] || translations.en[key] || key;
 
   if (variables) {

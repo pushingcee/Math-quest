@@ -6,12 +6,12 @@ import { Player, GameScreen } from '@/types/game';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { TileLandingResult } from '@/game/constants/enums';
 import { GameEngine } from '@/game/engine/GameEngine';
-import { GameState } from '@/game/engine/GameState';
+import { GameState, GameSetupOptions } from '@/game/engine/GameState';
 import { ItemType, ITEM_CATALOG } from '@/types/items';
 import { assetPath } from '@/utils/assetPath';
 import { ItemSystem } from '@/game/systems/ItemSystem';
 import { DevTools } from '@/game/debug/devtools';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useGameState } from '@/contexts/GameStateContext';
 import { t } from '@/i18n/translations';
 import GameSetup from './GameSetup';
@@ -49,6 +49,11 @@ export default function MathQuest() {
   const diceAudioRef = useRef<HTMLAudioElement[]>([]);
   const yayAudioRef = useRef<HTMLAudioElement[]>([]);
   const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Keep the current language readable from long-lived callbacks (the
+  // timer interval) without restarting them when the language changes.
+  const languageRef = useRef(language);
+  languageRef.current = language;
 
   // Subscribe to engine state changes
   useEffect(() => {
@@ -99,7 +104,7 @@ export default function MathQuest() {
               clearInterval(timerIntervalRef.current);
               timerIntervalRef.current = null;
             }
-            engine.submitAnswerTimeout(language);
+            engine.submitAnswerTimeout(languageRef.current);
           }
         }
       }, 1000);
@@ -138,56 +143,33 @@ export default function MathQuest() {
     }
   }, [gameState.currentPlayer, gameState.players, gameState.teleporterActive, gameState.pendingItemUse, gameState.isRolling, gameState.movingPlayer, engine]);
 
-  // Helper to get audio path
-  const getAudioPath = useCallback((filename: string) => {
-    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/Math-quest')) {
-      return `/Math-quest/${filename}`;
-    }
-    return `/${filename}`;
-  }, []);
-
   // Preload audio
   useEffect(() => {
-    const diceSounds = ['dr2.mp3', 'dr3.mp3', 'dr4.mp3', 'dr5.mp3'];
-    diceAudioRef.current = diceSounds.map(sound => {
-      const audio = new Audio(getAudioPath(sound));
+    const loadAudio = (filename: string) => {
+      const audio = new Audio(assetPath(`/${filename}`));
       audio.preload = 'auto';
       audio.load();
       return audio;
-    });
+    };
+
+    const diceSounds = ['dr2.mp3', 'dr3.mp3', 'dr4.mp3', 'dr5.mp3'];
+    diceAudioRef.current = diceSounds.map(loadAudio);
 
     const yaySounds = ['yay1.mp3', 'yay2.mp3', 'yay3.mp3', 'yay4.mp3', 'yay5.mp3'];
-    yayAudioRef.current = yaySounds.map(sound => {
-      const audio = new Audio(getAudioPath(sound));
-      audio.preload = 'auto';
-      audio.load();
-      return audio;
-    });
+    yayAudioRef.current = yaySounds.map(loadAudio);
 
-    const chimeAudio = new Audio(getAudioPath('chime.mp3'));
-    chimeAudio.preload = 'auto';
-    chimeAudio.load();
-    chimeAudioRef.current = chimeAudio;
-  }, [getAudioPath]);
+    chimeAudioRef.current = loadAudio('chime.mp3');
+  }, []);
 
   // ===== EVENT HANDLERS =====
 
   const handleStartGame = useCallback((
     playerCount: number,
     problems?: ImportedProblemsData,
-    negativePoints?: boolean,
-    enableTimer?: boolean,
-    timerValue?: number,
-    autoClose?: boolean,
-    displayProblemsInTiles?: boolean
+    options?: GameSetupOptions
   ) => {
-    engine.startAvatarSelection(playerCount, problems, {
-      negativePointsEnabled: negativePoints !== undefined ? negativePoints : true,
-      timerEnabled: enableTimer !== undefined ? enableTimer : false,
-      timerDuration: timerValue !== undefined ? timerValue : 30,
-      autoCloseModal: autoClose !== undefined ? autoClose : true,
-      displayProblemsInTiles: displayProblemsInTiles !== undefined ? displayProblemsInTiles : true,
-    });
+    // Engine merges options over the defaults in createInitialState
+    engine.startAvatarSelection(playerCount, problems, options);
   }, [engine]);
 
   const handleSelectAvatar = useCallback((avatarIndex: number, color: string) => {
@@ -223,7 +205,7 @@ export default function MathQuest() {
     engine.completePlayerMovement();
 
     if (passedStart) {
-      engine.applyPassStartBonus(playerId);
+      engine.applyPassStartBonus(playerId, language);
     }
 
     const finalState = engine.getState();
@@ -231,7 +213,7 @@ export default function MathQuest() {
 
     // Handle tile landing
     setTimeout(() => {
-      const result = engine.handleTileLanding(actualPosition, playerId);
+      const result = engine.handleTileLanding(actualPosition, playerId, language);
       if (result === TileLandingResult.Next) {
         const state = engine.getState();
         // If a message is shown (e.g. obstacle), the MessageModal's onClose
@@ -241,15 +223,12 @@ export default function MathQuest() {
         }
       }
     }, 500);
-  }, [engine]);
+  }, [engine, language]);
 
   const handleRollDice = useCallback(() => {
-    console.log('🎲 handleRollDice called', { suppressDiceSound, lastRollWasLuckyDice: gameState.lastRollWasLuckyDice });
-
     // Check if player has Lucky Dice item to use
     const hasLuckyDice = engine.checkForDiceItem();
     if (hasLuckyDice) {
-      console.log('Lucky Dice item found, returning early');
       return; // Wait for item prompt response
     }
 
@@ -258,13 +237,10 @@ export default function MathQuest() {
 
     // Play dice sound only if not suppressed and not a Lucky Dice result
     if (!suppressDiceSound && !gameState.lastRollWasLuckyDice && diceAudioRef.current.length > 0) {
-      console.log('🔊 Playing dice sound');
       const randomIndex = Math.floor(Math.random() * diceAudioRef.current.length);
       const audio = diceAudioRef.current[randomIndex];
       audio.currentTime = 0;
-      audio.play().catch(e => console.log('Audio play failed:', e));
-    } else {
-      console.log('🔇 Sound suppressed', { suppressDiceSound, lastRollWasLuckyDice: gameState.lastRollWasLuckyDice });
+      audio.play().catch(() => { /* autoplay blocked — not critical */ });
     }
 
     // Complete dice roll after animation
@@ -286,7 +262,7 @@ export default function MathQuest() {
       if (chimeAudioRef.current) {
         const chime = chimeAudioRef.current.cloneNode() as HTMLAudioElement;
         chime.playbackRate = 0.95 + Math.random() * 0.1;
-        chime.play().catch(e => console.log('Audio play failed:', e));
+        chime.play().catch(() => { /* autoplay blocked — not critical */ });
       }
 
       // Play celebration sound on streak
@@ -296,7 +272,7 @@ export default function MathQuest() {
         const randomIndex = Math.floor(Math.random() * yayAudioRef.current.length);
         const audio = yayAudioRef.current[randomIndex];
         audio.currentTime = 0;
-        audio.play().catch(e => console.log('Audio play failed:', e));
+        audio.play().catch(() => { /* autoplay blocked — not critical */ });
       }
     }
   }, [engine, language]);
@@ -519,15 +495,12 @@ export default function MathQuest() {
                     const actualPosition = state.players[playerId]?.position ?? tileIndex;
 
                     // Handle tile landing
-                    const result = engine.handleTileLanding(actualPosition, playerId);
+                    const result = engine.handleTileLanding(actualPosition, playerId, language);
                     if (result === TileLandingResult.Next) {
-                      // Wait for message modal to display before advancing
+                      // If a message is shown (e.g. obstacle), the MessageModal's
+                      // onClose already calls nextTurn — don't double-advance here.
                       const latestState = engine.getState();
-                      if (latestState.message !== null) {
-                        setTimeout(() => {
-                          engine.nextTurn();
-                        }, 2600);
-                      } else {
+                      if (latestState.message === null) {
                         engine.nextTurn();
                       }
                     }
@@ -583,6 +556,7 @@ export default function MathQuest() {
           streak={gameState.message?.streak}
           problem={gameState.message?.problem}
           userAnswer={gameState.message?.userAnswer}
+          isTimeout={gameState.message?.isTimeout}
           onClose={handleCloseMessage}
           autoClose={gameState.config.autoCloseModal}
         />
@@ -603,8 +577,8 @@ export default function MathQuest() {
           <ItemPrompt
             isOpen={true}
             itemEmoji={ITEM_CATALOG[gameState.pendingItemUse.itemType].emoji}
-            itemName={ITEM_CATALOG[gameState.pendingItemUse.itemType].name}
-            promptMessage={`Would you like to use your ${ITEM_CATALOG[gameState.pendingItemUse.itemType].name}?`}
+            itemName={t(language, ITEM_CATALOG[gameState.pendingItemUse.itemType].nameKey)}
+            promptMessage={t(language, ITEM_CATALOG[gameState.pendingItemUse.itemType].descriptionKey)}
             onUse={() => handleUseItem(gameState.pendingItemUse!.itemType)}
             onDecline={handleDeclineItem}
           />

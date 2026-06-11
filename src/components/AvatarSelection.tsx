@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { playerSprites } from './PlayerSprites';
 import { colorizePlayerSprite } from '@/game/utils/svgColorizer';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
+import { PLAYER_COLOR_OPTIONS, AVATAR_DEFAULT_COLORS } from '@/game/constants/colors';
 
 interface AvatarSelectionProps {
   playerNumber: number;
@@ -12,17 +13,6 @@ interface AvatarSelectionProps {
   selectedColors: string[];
   onSelectAvatar: (avatarIndex: number, color: string) => void;
 }
-
-const AVAILABLE_COLORS = [
-  { nameKey: 'red', hex: '#e74c3c' },
-  { nameKey: 'blue', hex: '#3498db' },
-  { nameKey: 'green', hex: '#2ecc71' },
-  { nameKey: 'orange', hex: '#f39c12' },
-  { nameKey: 'purple', hex: '#9b59b6' },
-  { nameKey: 'pink', hex: '#e91e63' },
-  { nameKey: 'teal', hex: '#1abc9c' },
-  { nameKey: 'yellow', hex: '#f1c40f' },
-] as const;
 
 export default function AvatarSelection({
   playerNumber,
@@ -39,22 +29,12 @@ export default function AvatarSelection({
     if (!selectedAvatars.includes(index)) {
       setSelectedAvatarIndex(index);
 
-      // Set default color based on avatar
-      const defaultColors = [
-        '#e74c3c', // Knight → Red
-        '#3498db', // Wizard → Blue
-        '#2ecc71', // Archer → Green
-        '#f39c12', // Rogue → Orange
-        '#9b59b6', // Jester → Purple
-      ];
-
-      const defaultColor = defaultColors[index];
-      // Only set default if that color isn't taken
-      if (!selectedColors.includes(defaultColor)) {
+      // Set default color based on avatar (if not taken, else first available)
+      const defaultColor = AVATAR_DEFAULT_COLORS[index];
+      if (defaultColor && !selectedColors.includes(defaultColor)) {
         setSelectedColor(defaultColor);
       } else {
-        // If default is taken, find first available color
-        const availableColor = AVAILABLE_COLORS.find(c => !selectedColors.includes(c.hex));
+        const availableColor = PLAYER_COLOR_OPTIONS.find(c => !selectedColors.includes(c.hex));
         setSelectedColor(availableColor?.hex || null);
       }
     }
@@ -137,7 +117,7 @@ export default function AvatarSelection({
       <div className="mb-8">
         <h3 className="mb-4 text-xl font-semibold text-gray-700">{t(language, 'selectYourColor')}</h3>
         <div className="flex flex-wrap justify-center gap-4">
-          {AVAILABLE_COLORS.map((color) => {
+          {PLAYER_COLOR_OPTIONS.map((color) => {
             const isTaken = selectedColors.includes(color.hex);
             const isChosen = selectedColor === color.hex;
 

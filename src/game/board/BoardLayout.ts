@@ -38,6 +38,27 @@ export interface BoardLayoutResult {
 /** Gap in pixels between adjacent tiles (visible on all sides) */
 export const TILE_GAP = 5;
 
+/** Fixed world size in pixels the board is laid out at (750 * 1.15). */
+export const BOARD_WORLD_SIZE = 863;
+
+/**
+ * Pixel rect for a tile at a 1-based grid position, inset by the tile gap.
+ */
+export function gridCellRect(
+  row: number,
+  col: number,
+  span: number,
+  cellSize: number
+): { x: number; y: number; width: number; height: number } {
+  const halfGap = TILE_GAP / 2;
+  return {
+    x: (col - 1) * cellSize + halfGap,
+    y: (row - 1) * cellSize + halfGap,
+    width: cellSize * span - TILE_GAP,
+    height: cellSize * span - TILE_GAP,
+  };
+}
+
 /**
  * Compute pixel positions for all tiles defined in a BoardConfig.
  *
@@ -52,18 +73,11 @@ export function computeBoardLayout(
   const cellSize = boardPixelSize / gridMax;
   const tiles: TileLayout[] = [];
   const modifiers: ModifierLayout[] = [];
-  const halfGap = TILE_GAP / 2;
   let gameIndex = 0;
 
   for (let i = 0; i < config.tiles.length; i++) {
     const tile = config.tiles[i];
-    const span = tile.span ?? 1;
-
-    const w = cellSize * span - TILE_GAP;
-    const h = cellSize * span - TILE_GAP;
-    // Convert 1-based grid position to 0-based pixel position, then inset
-    const x = (tile.col - 1) * cellSize + halfGap;
-    const y = (tile.row - 1) * cellSize + halfGap;
+    const { x, y, width: w, height: h } = gridCellRect(tile.row, tile.col, tile.span ?? 1, cellSize);
 
     if (tile.type === 'modifier') {
       modifiers.push({

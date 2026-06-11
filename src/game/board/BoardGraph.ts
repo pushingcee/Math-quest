@@ -9,7 +9,7 @@
 import { TileData } from '@/types/game';
 import { computeBoardLayout, ModifierLayout } from './BoardLayout';
 import { BoardConfig } from './BoardConfig';
-import { BoardTileNode, PawnSlot, generatePawnSlots } from './BoardTile';
+import { BoardTileNode, generatePawnSlots } from './BoardTile';
 
 export class BoardGraph {
   /** Every tile including corners, keyed by id */
@@ -76,10 +76,6 @@ export class BoardGraph {
 
   // ── Queries ──────────────────────────────────────────────
 
-  getTileById(id: string): BoardTileNode | null {
-    return this.tilesById.get(id) ?? null;
-  }
-
   getTileByIndex(index: number): BoardTileNode | null {
     return this.tilesByIndex.get(index) ?? null;
   }
@@ -87,20 +83,6 @@ export class BoardGraph {
   /** All tiles including corners (for rendering). */
   getAllTiles(): BoardTileNode[] {
     return Array.from(this.tilesById.values());
-  }
-
-  /** Only tiles in the traversal chain (no corners). */
-  getTraversableTiles(): BoardTileNode[] {
-    if (!this.head) return [];
-
-    const result: BoardTileNode[] = [];
-    let current: BoardTileNode | null = this.head;
-    do {
-      result.push(current);
-      current = current.next;
-    } while (current && current !== this.head);
-
-    return result;
   }
 
   /** Modifier overlays (for rendering, not game tiles). */
@@ -174,119 +156,33 @@ export class BoardGraph {
     return current;
   }
 
-  // ── Pawn Slot Management ─────────────────────────────────
+  // ── Pawn Slots ───────────────────────────────────────────
 
   /**
-   * Claim the first available pawn slot on a tile for a player.
-   * Returns the slot, or null if no slots are free.
+   * Compute each player's pawn-slot offset from their tile's center.
+   * Players sharing a tile take that tile's slot templates in array
+   * order. Pure — derived from the players array, no graph state.
    */
-  claimSlot(tileId: string, playerId: number): PawnSlot | null {
-    const tile = this.tilesById.get(tileId);
-    if (!tile) return null;
+  getSlotOffsets(
+    players: { id: number; position: number }[]
+  ): Map<number, { x: number; y: number }> {
+    const offsets = new Map<number, { x: number; y: number }>();
+    const byTile = new Map<number, { id: number; position: number }[]>();
 
-    // If player already has a slot on this tile, return it
-    const existing = tile.pawnSlots.find((s) => s.playerId === playerId);
-    if (existing) return existing;
-
-    const free = tile.pawnSlots.find((s) => s.playerId === null);
-    if (!free) return null;
-
-    free.playerId = playerId;
-    return free;
-  }
-
-  /**
-   * Release a player's pawn slot on a tile.
-   */
-  releaseSlot(tileId: string, playerId: number): void {
-    const tile = this.tilesById.get(tileId);
-    if (!tile) return;
-
-    const slot = tile.pawnSlots.find((s) => s.playerId === playerId);
-    if (slot) {
-      slot.playerId = null;
-    }
-  }
-
-  /**
-   * Get the pawn slot offset for a specific player on a tile.
-   * Returns {x: 0, y: 0} if the player has no slot (fallback).
-   */
-  getPlayerSlotOffset(
-    tileIndex: number,
-    playerId: number
-  ): { x: number; y: number } {
-    const tile = this.tilesByIndex.get(tileIndex);
-    if (!tile) return { x: 0, y: 0 };
-
-    const slot = tile.pawnSlots.find((s) => s.playerId === playerId);
-    if (!slot) return { x: 0, y: 0 };
-
-    return { x: slot.localX, y: slot.localY };
-  }
-
-  /**
-   * Sync all pawn slots from an array of players.
-   * Clears all slots first, then claims for each player's current position.
-   */
-  syncSlotsFromPlayers(players: { id: number; position: number }[]): void {
-    // Clear all slots
-    for (const tile of this.tilesById.values()) {
-      for (const slot of tile.pawnSlots) {
-        slot.playerId = null;
-      }
-    }
-
-    // Claim slots for each player
     for (const player of players) {
-      const tile = this.tilesByIndex.get(player.position);
-      if (tile) {
-        this.claimSlot(tile.id, player.id);
-      }
-    }
-  }
-
-  // ── Dynamic Board Manipulation ───────────────────────────
-
-  /**
-   * Remove a tile from the traversal chain.
-   * The tile stays in allTiles for rendering but movement skips it.
-   */
-  unlinkTile(tileId: string): void {
-    const tile = this.tilesById.get(tileId);
-    if (!tile || !tile.prev || !tile.next) return;
-
-    // If this is the head, move head forward
-    if (tile === this.head) {
-      this.head = tile.next !== tile ? tile.next : null;
+      const group = byTile.get(player.position) ?? [];
+      group.push(player);
+      byTile.set(player.position, group);
     }
 
-    // Stitch neighbors together
-    tile.prev.next = tile.next;
-    tile.next.prev = tile.prev;
-
-    // Disconnect this tile from the chain
-    tile.next = null;
-    tile.prev = null;
-  }
-
-  /**
-   * Re-insert a tile into the traversal chain after a given tile.
-   */
-  relinkTile(tileId: string, afterTileId: string): void {
-    const tile = this.tilesById.get(tileId);
-    const after = this.tilesById.get(afterTileId);
-    if (!tile || !after || !after.next) return;
-
-    // Already linked — unlink first
-    if (tile.next || tile.prev) {
-      this.unlinkTile(tileId);
+    for (const [position, group] of byTile) {
+      const tile = this.tilesByIndex.get(position);
+      group.forEach((player, i) => {
+        const slot = tile?.pawnSlots[i];
+        offsets.set(player.id, slot ? { x: slot.localX, y: slot.localY } : { x: 0, y: 0 });
+      });
     }
 
-    const before = after.next;
-    after.next = tile;
-    tile.prev = after;
-    tile.next = before;
-    before.prev = tile;
+    return offsets;
   }
 }
