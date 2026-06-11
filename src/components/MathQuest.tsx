@@ -200,7 +200,7 @@ export default function MathQuest() {
     engine.completePlayerMovement();
 
     if (passedStart) {
-      engine.applyPassStartBonus(playerId);
+      engine.applyPassStartBonus(playerId, language);
     }
 
     const finalState = engine.getState();
@@ -208,7 +208,7 @@ export default function MathQuest() {
 
     // Handle tile landing
     setTimeout(() => {
-      const result = engine.handleTileLanding(actualPosition, playerId);
+      const result = engine.handleTileLanding(actualPosition, playerId, language);
       if (result === TileLandingResult.Next) {
         const state = engine.getState();
         // If a message is shown (e.g. obstacle), the MessageModal's onClose
@@ -218,7 +218,7 @@ export default function MathQuest() {
         }
       }
     }, 500);
-  }, [engine]);
+  }, [engine, language]);
 
   const handleRollDice = useCallback(() => {
     console.log('🎲 handleRollDice called', { suppressDiceSound, lastRollWasLuckyDice: gameState.lastRollWasLuckyDice });
@@ -496,7 +496,7 @@ export default function MathQuest() {
                     const actualPosition = state.players[playerId]?.position ?? tileIndex;
 
                     // Handle tile landing
-                    const result = engine.handleTileLanding(actualPosition, playerId);
+                    const result = engine.handleTileLanding(actualPosition, playerId, language);
                     if (result === TileLandingResult.Next) {
                       // If a message is shown (e.g. obstacle), the MessageModal's
                       // onClose already calls nextTurn — don't double-advance here.

@@ -70,11 +70,11 @@ export class ScoringSystem {
   /**
    * Calculate bonus for passing START
    */
-  static calculatePassStartBonus(): { scoreChange: number; coinReward: number; message: string } {
+  static calculatePassStartBonus(language: Language = 'en'): { scoreChange: number; coinReward: number; message: string } {
     return {
       scoreChange: TileScoring.PassStart.points,
       coinReward: 30,
-      message: TileScoring.PassStart.message
+      message: t(language, 'passedStart', { points: TileScoring.PassStart.points })
     };
   }
 

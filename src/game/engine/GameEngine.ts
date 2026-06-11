@@ -10,7 +10,7 @@ import { TurnSystem } from '../systems/TurnSystem';
 import { ObstacleSystem } from '../systems/ObstacleSystem';
 import { ItemSystem } from '../systems/ItemSystem';
 import { ItemType } from '@/types/items';
-import { Language } from '@/i18n/translations';
+import { Language, t } from '@/i18n/translations';
 import { BoardGraph } from '../board/BoardGraph';
 import { BoardConfigLoader } from '../board/BoardConfigLoader';
 import defaultBoardJson from '../board/boards/default.board.json';
@@ -318,11 +318,11 @@ export class GameEngine {
   /**
    * Handle passing START bonus
    */
-  applyPassStartBonus(playerId: number) {
+  applyPassStartBonus(playerId: number, language: Language = 'en') {
     const player = this.state.players[playerId];
     if (!player) return;
 
-    const { scoreChange, coinReward, message } = ScoringSystem.calculatePassStartBonus();
+    const { scoreChange, coinReward, message } = ScoringSystem.calculatePassStartBonus(language);
     let updatedPlayer = ScoringSystem.applyScoreChange(player, scoreChange);
     updatedPlayer = ItemSystem.awardCoins(updatedPlayer, coinReward);
 
@@ -336,7 +336,7 @@ export class GameEngine {
   /**
    * Handle landing on a tile
    */
-  handleTileLanding(position: number, playerId: number): TileLandingResult {
+  handleTileLanding(position: number, playerId: number, language: Language = 'en'): TileLandingResult {
     const tile = this.state.tiles.find(t => t.index === position);
     if (!tile) return TileLandingResult.Next;
 
@@ -353,7 +353,8 @@ export class GameEngine {
         const { player: updatedPlayer, message } = ObstacleSystem.applyObstacleEffect(
           player,
           tile.obstacleType,
-          this._boardGraph
+          this._boardGraph,
+          language
         );
 
         this.updatePlayer(playerId, updatedPlayer, {
@@ -392,7 +393,7 @@ export class GameEngine {
       if (multiplier > 1) {
         this.setState({
           bannerMessage: {
-            text: 'BONUS! Your next correct answer worth double!',
+            text: t(language, 'bonusDoublePoints'),
             type: MessageType.Success
           }
         });

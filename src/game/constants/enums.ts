@@ -45,6 +45,5 @@ export enum TileLandingResult {
 export const TileScoring = {
   PassStart: {
     points: 50,
-    message: 'Passed START! +50 points!',
   },
 } as const;
