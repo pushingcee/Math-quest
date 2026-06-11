@@ -521,13 +521,10 @@ export default function MathQuest() {
                     // Handle tile landing
                     const result = engine.handleTileLanding(actualPosition, playerId);
                     if (result === TileLandingResult.Next) {
-                      // Wait for message modal to display before advancing
+                      // If a message is shown (e.g. obstacle), the MessageModal's
+                      // onClose already calls nextTurn — don't double-advance here.
                       const latestState = engine.getState();
-                      if (latestState.message !== null) {
-                        setTimeout(() => {
-                          engine.nextTurn();
-                        }, 2600);
-                      } else {
+                      if (latestState.message === null) {
                         engine.nextTurn();
                       }
                     }
