@@ -50,6 +50,11 @@ export default function MathQuest() {
   const yayAudioRef = useRef<HTMLAudioElement[]>([]);
   const chimeAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Keep the current language readable from long-lived callbacks (the
+  // timer interval) without restarting them when the language changes.
+  const languageRef = useRef(language);
+  languageRef.current = language;
+
   // Subscribe to engine state changes
   useEffect(() => {
     const unsubscribe = engine.subscribe((newState) => {
@@ -99,7 +104,7 @@ export default function MathQuest() {
               clearInterval(timerIntervalRef.current);
               timerIntervalRef.current = null;
             }
-            engine.submitAnswerTimeout(language);
+            engine.submitAnswerTimeout(languageRef.current);
           }
         }
       }, 1000);
