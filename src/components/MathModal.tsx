@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
-import { MathRenderer } from '@jahnchock/math-to-latex';
-import 'katex/dist/katex.min.css';
 import { useLanguage } from '@/context/LanguageContext';
 import { t } from '@/i18n/translations';
+import MathText from './MathText';
 
 interface MathModalProps {
   isOpen: boolean;
@@ -21,7 +20,6 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
   const { language } = useLanguage();
   const [answer, setAnswer] = useState('');
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false);
-  const mathRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Detect if device has touch capability or is mobile
@@ -39,32 +37,6 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
       setAnswer('');
     }
   }, [isOpen]);
-
-  // Render math with MathRenderer
-  useEffect(() => {
-    if (mathRef.current && problem) {
-      // Check if problem starts with "tz" or "тз" (case insensitive)
-      const isPlainText = /^(tz|тз)/i.test(problem.trim());
-
-      if (isPlainText) {
-        // Display as plain text without KaTeX formatting, removing the "tz" or "тз" prefix
-        const textWithoutPrefix = problem.replace(/^(tz|тз)\s*/i, '');
-        mathRef.current.textContent = textWithoutPrefix;
-        mathRef.current.style.whiteSpace = 'normal';
-        mathRef.current.style.wordWrap = 'break-word';
-      } else {
-        try {
-          // Use MathRenderer to convert and render the math expression
-          const renderedHtml = MathRenderer.render(problem);
-          mathRef.current.innerHTML = renderedHtml;
-        } catch (error) {
-          console.error('KaTeX rendering error:', error);
-          // Fallback to plain text
-          mathRef.current.textContent = problem;
-        }
-      }
-    }
-  }, [problem]);
 
   const handleSubmit = () => {
     if (answer) {
@@ -116,10 +88,10 @@ export default function MathModal({ isOpen, problem, points, timeLeft, onSubmit,
           </div>
         )}
         <div className="my-4 flex items-center justify-center gap-2 text-2xl font-bold text-black">
-          <div
-            ref={mathRef}
+          <MathText
+            text={problem}
             className="max-w-[350px] px-2 py-2 whitespace-normal break-words"
-          ></div>
+          />
           <span className="shrink-0">= ?</span>
         </div>
         {timerEnabled && (
