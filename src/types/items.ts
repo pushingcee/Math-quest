@@ -1,3 +1,5 @@
+import { TranslationKey } from '@/i18n/translations';
+
 export enum ItemType {
   Shield = 'shield',
   ExtraDiceRoll = 'extraDiceRoll',
@@ -9,6 +11,9 @@ export interface ItemDefinition {
   id: ItemType;
   name: string;
   description: string;
+  /** i18n keys for the translated name/description */
+  nameKey: TranslationKey;
+  descriptionKey: TranslationKey;
   emoji: string;
   price: number;
   maxUses: number;
@@ -25,6 +30,8 @@ export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
     id: ItemType.Shield,
     name: 'Shield',
     description: 'Protects from the next trap or slip',
+    nameKey: 'shield',
+    descriptionKey: 'shieldDescription',
     emoji: '🛡️',
     price: 45,
     maxUses: 1,
@@ -34,6 +41,8 @@ export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
     id: ItemType.ExtraDiceRoll,
     name: 'Lucky Dice',
     description: 'Roll twice and choose the better result',
+    nameKey: 'luckyDice',
+    descriptionKey: 'luckyDiceDescription',
     emoji: '🎲',
     price: 60,
     maxUses: 3,
@@ -43,6 +52,8 @@ export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
     id: ItemType.PointMultiplier,
     name: 'Point Booster',
     description: '1.5x points on next 2 correct answers',
+    nameKey: 'pointBooster',
+    descriptionKey: 'pointBoosterDescription',
     emoji: '⭐',
     price: 75,
     maxUses: 2,
@@ -52,6 +63,8 @@ export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
     id: ItemType.Teleport,
     name: 'Teleporter',
     description: 'Move to any tile (no obstacles)',
+    nameKey: 'teleporter',
+    descriptionKey: 'teleporterDescription',
     emoji: '🌀',
     price: 90,
     maxUses: 1,

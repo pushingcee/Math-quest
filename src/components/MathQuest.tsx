@@ -585,8 +585,8 @@ export default function MathQuest() {
           <ItemPrompt
             isOpen={true}
             itemEmoji={ITEM_CATALOG[gameState.pendingItemUse.itemType].emoji}
-            itemName={ITEM_CATALOG[gameState.pendingItemUse.itemType].name}
-            promptMessage={`Would you like to use your ${ITEM_CATALOG[gameState.pendingItemUse.itemType].name}?`}
+            itemName={t(language, ITEM_CATALOG[gameState.pendingItemUse.itemType].nameKey)}
+            promptMessage={t(language, ITEM_CATALOG[gameState.pendingItemUse.itemType].descriptionKey)}
             onUse={() => handleUseItem(gameState.pendingItemUse!.itemType)}
             onDecline={handleDeclineItem}
           />

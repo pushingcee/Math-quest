@@ -56,16 +56,6 @@ export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: Shop
             const alreadyOwned = player.inventory.find(i => i.itemType === itemType);
             const cannotBuy = (alreadyOwned && !itemDef.stackable);
 
-            // Get translated item name and description
-            const itemNameKey = itemType === ItemType.Shield ? 'shield'
-              : itemType === ItemType.ExtraDiceRoll ? 'luckyDice'
-              : itemType === ItemType.PointMultiplier ? 'pointBooster'
-              : 'teleporter';
-            const itemDescKey = itemType === ItemType.Shield ? 'shieldDescription'
-              : itemType === ItemType.ExtraDiceRoll ? 'luckyDiceDescription'
-              : itemType === ItemType.PointMultiplier ? 'pointBoosterDescription'
-              : 'teleporterDescription';
-
             return (
               <div
                 key={itemType}
@@ -81,12 +71,12 @@ export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: Shop
 
                 {/* Item Name */}
                 <h3 className="mb-2 text-center text-xl font-bold text-purple-700">
-                  {t(language, itemNameKey)}
+                  {t(language, itemDef.nameKey)}
                 </h3>
 
                 {/* Item Description */}
                 <p className="mb-3 text-center text-sm text-gray-700">
-                  {t(language, itemDescKey)}
+                  {t(language, itemDef.descriptionKey)}
                 </p>
 
                 {/* Uses */}
@@ -133,19 +123,13 @@ export default function ShopDrawer({ isOpen, player, onPurchase, onClose }: Shop
             <div className="flex flex-wrap gap-3">
               {player.inventory.map((item, idx) => {
                 const itemDef = ITEM_CATALOG[item.itemType];
-                // Get translated item name
-                const itemNameKey = item.itemType === ItemType.Shield ? 'shield'
-                  : item.itemType === ItemType.ExtraDiceRoll ? 'luckyDice'
-                  : item.itemType === ItemType.PointMultiplier ? 'pointBooster'
-                  : 'teleporter';
-
                 return (
                   <div
                     key={idx}
                     className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm"
                   >
                     <span className="text-2xl">{itemDef.emoji}</span>
-                    <span className="font-semibold text-purple-700">{t(language, itemNameKey)}</span>
+                    <span className="font-semibold text-purple-700">{t(language, itemDef.nameKey)}</span>
                     <span className="text-sm text-purple-600">×{item.usesRemaining}</span>
                   </div>
                 );

@@ -283,7 +283,9 @@ export const translations = {
   },
 };
 
-export function t(language: Language, key: keyof (typeof translations.en), variables?: Record<string, string | number>): string {
+export type TranslationKey = keyof (typeof translations.en);
+
+export function t(language: Language, key: TranslationKey, variables?: Record<string, string | number>): string {
   let text = translations[language][key] || translations.en[key] || key;
 
   if (variables) {
