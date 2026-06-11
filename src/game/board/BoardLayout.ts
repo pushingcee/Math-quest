@@ -38,6 +38,9 @@ export interface BoardLayoutResult {
 /** Gap in pixels between adjacent tiles (visible on all sides) */
 export const TILE_GAP = 5;
 
+/** Fixed world size in pixels the board is laid out at (750 * 1.15). */
+export const BOARD_WORLD_SIZE = 863;
+
 /**
  * Compute pixel positions for all tiles defined in a BoardConfig.
  *

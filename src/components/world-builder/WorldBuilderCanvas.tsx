@@ -9,11 +9,10 @@ import {
   FederatedPointerEvent,
 } from 'pixi.js';
 import { EditorState, EditorTile, DragState, GroupOffset } from './worldBuilderTypes';
-import { TILE_GAP } from '@/game/board/BoardLayout';
+import { TILE_GAP, BOARD_WORLD_SIZE as WORLD_SIZE } from '@/game/board/BoardLayout';
 
 extend({ Container, Graphics: PixiGraphics, Text: PixiText });
 
-const WORLD_SIZE = 863;
 const DRAG_THRESHOLD = 4; // px — below this = click, above = drag
 
 // ── colours ─────────────────────────────────────────────────────────────────

@@ -3,23 +3,16 @@
  * centered in the viewport on any screen size.
  */
 import { useEffect } from 'react';
-import { Container, Ticker } from 'pixi.js';
-
-interface CameraTarget {
-  x: number;
-  y: number;
-}
+import { Container } from 'pixi.js';
 
 interface CameraConfig {
   viewportWidth: number;
   viewportHeight: number;
   worldSize: number;
-  ticker: Ticker | null;
 }
 
 export function useCamera(
   worldRef: React.RefObject<Container | null>,
-  target: CameraTarget | null,
   config: CameraConfig
 ) {
   useEffect(() => {

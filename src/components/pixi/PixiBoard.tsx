@@ -4,7 +4,7 @@ import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { Application, extend, useApplication } from '@pixi/react';
 import { Container, Graphics as PixiGraphics, Sprite as PixiSprite, Text as PixiText, Texture, Assets, Ticker } from 'pixi.js';
 import { TileData, Player } from '@/types/game';
-import { TILE_GAP } from '@/game/board/BoardLayout';
+import { TILE_GAP, BOARD_WORLD_SIZE } from '@/game/board/BoardLayout';
 import { BoardGraph } from '@/game/board/BoardGraph';
 import { BoardConfig } from '@/game/board/BoardConfig';
 import { BoardConfigLoader } from '@/game/board/BoardConfigLoader';
@@ -38,10 +38,8 @@ interface PixiBoardProps {
   boardConfig?: BoardConfig;
 }
 
-const BOARD_BG = 0x334155; // slate-700
 const TILE_GAP_COLOR = 0x6b7280; // gray-500 — visible in the gaps between tiles
 const BOARD_PADDING = 0;
-const BOARD_WORLD_SIZE = 863; // fixed world size — 750 * 1.15 (scaled up 15%)
 
 function FpsCounter({ x, y }: { x: number; y: number }) {
   const { app } = useApplication();
@@ -127,10 +125,8 @@ function PixiBoardContent({
     [innerSize, tiles, config]
   );
 
-  // Sync pawn slots whenever players move
-  useMemo(() => {
-    boardGraph.syncSlotsFromPlayers(players);
-  }, [boardGraph, players]);
+  // Pawn slot offsets, derived purely from player positions
+  const slotOffsets = useMemo(() => boardGraph.getSlotOffsets(players), [boardGraph, players]);
 
   // Derived layout values for rendering (shadows, gap bg, background image)
   const layout = useMemo(() => {
@@ -143,18 +139,6 @@ function PixiBoardContent({
       cellSize,
     };
   }, [boardGraph, innerSize, config]);
-
-  // Find the active player's world-space position for the camera
-  const activePlayer = players[currentPlayer];
-  const cameraTarget = useMemo(() => {
-    if (!activePlayer) return null;
-    const tileNode = boardGraph.getTileByIndex(activePlayer.position);
-    if (!tileNode) return null;
-    return {
-      x: tileNode.layout.centerX + BOARD_PADDING,
-      y: tileNode.layout.centerY + BOARD_PADDING,
-    };
-  }, [activePlayer?.position, boardGraph]);
 
   // Drop shadows — single Graphics layer, zero GPU filter cost
   const drawTileShadows = useCallback(
@@ -194,12 +178,11 @@ function PixiBoardContent({
     [layout.modifiers]
   );
 
-  // Camera: smoothly pans/zooms the world container
-  useCamera(worldRef, cameraTarget, {
+  // Fit the world container to the viewport, centered
+  useCamera(worldRef, {
     viewportWidth,
     viewportHeight,
     worldSize: BOARD_WORLD_SIZE,
-    ticker: app?.ticker ?? null,
   });
 
   return (<>
@@ -278,7 +261,7 @@ function PixiBoardContent({
         {players.map((player) => {
           const tileNode = boardGraph.getTileByIndex(player.position);
           if (!tileNode) return null;
-          const slotOffset = boardGraph.getPlayerSlotOffset(player.position, player.id);
+          const slotOffset = slotOffsets.get(player.id) ?? { x: 0, y: 0 };
           return (
             <PixiPlayerToken
               key={player.id}

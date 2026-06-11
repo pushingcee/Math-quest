@@ -9,7 +9,7 @@
 import { TileData } from '@/types/game';
 import { computeBoardLayout, ModifierLayout } from './BoardLayout';
 import { BoardConfig } from './BoardConfig';
-import { BoardTileNode, PawnSlot, generatePawnSlots } from './BoardTile';
+import { BoardTileNode, generatePawnSlots } from './BoardTile';
 
 export class BoardGraph {
   /** Every tile including corners, keyed by id */
@@ -156,76 +156,33 @@ export class BoardGraph {
     return current;
   }
 
-  // ── Pawn Slot Management ─────────────────────────────────
+  // ── Pawn Slots ───────────────────────────────────────────
 
   /**
-   * Claim the first available pawn slot on a tile for a player.
-   * Returns the slot, or null if no slots are free.
+   * Compute each player's pawn-slot offset from their tile's center.
+   * Players sharing a tile take that tile's slot templates in array
+   * order. Pure — derived from the players array, no graph state.
    */
-  claimSlot(tileId: string, playerId: number): PawnSlot | null {
-    const tile = this.tilesById.get(tileId);
-    if (!tile) return null;
+  getSlotOffsets(
+    players: { id: number; position: number }[]
+  ): Map<number, { x: number; y: number }> {
+    const offsets = new Map<number, { x: number; y: number }>();
+    const byTile = new Map<number, { id: number; position: number }[]>();
 
-    // If player already has a slot on this tile, return it
-    const existing = tile.pawnSlots.find((s) => s.playerId === playerId);
-    if (existing) return existing;
-
-    const free = tile.pawnSlots.find((s) => s.playerId === null);
-    if (!free) return null;
-
-    free.playerId = playerId;
-    return free;
-  }
-
-  /**
-   * Release a player's pawn slot on a tile.
-   */
-  releaseSlot(tileId: string, playerId: number): void {
-    const tile = this.tilesById.get(tileId);
-    if (!tile) return;
-
-    const slot = tile.pawnSlots.find((s) => s.playerId === playerId);
-    if (slot) {
-      slot.playerId = null;
-    }
-  }
-
-  /**
-   * Get the pawn slot offset for a specific player on a tile.
-   * Returns {x: 0, y: 0} if the player has no slot (fallback).
-   */
-  getPlayerSlotOffset(
-    tileIndex: number,
-    playerId: number
-  ): { x: number; y: number } {
-    const tile = this.tilesByIndex.get(tileIndex);
-    if (!tile) return { x: 0, y: 0 };
-
-    const slot = tile.pawnSlots.find((s) => s.playerId === playerId);
-    if (!slot) return { x: 0, y: 0 };
-
-    return { x: slot.localX, y: slot.localY };
-  }
-
-  /**
-   * Sync all pawn slots from an array of players.
-   * Clears all slots first, then claims for each player's current position.
-   */
-  syncSlotsFromPlayers(players: { id: number; position: number }[]): void {
-    // Clear all slots
-    for (const tile of this.tilesById.values()) {
-      for (const slot of tile.pawnSlots) {
-        slot.playerId = null;
-      }
-    }
-
-    // Claim slots for each player
     for (const player of players) {
-      const tile = this.tilesByIndex.get(player.position);
-      if (tile) {
-        this.claimSlot(tile.id, player.id);
-      }
+      const group = byTile.get(player.position) ?? [];
+      group.push(player);
+      byTile.set(player.position, group);
     }
-  }
 
+    for (const [position, group] of byTile) {
+      const tile = this.tilesByIndex.get(position);
+      group.forEach((player, i) => {
+        const slot = tile?.pawnSlots[i];
+        offsets.set(player.id, slot ? { x: slot.localX, y: slot.localY } : { x: 0, y: 0 });
+      });
+    }
+
+    return offsets;
+  }
 }

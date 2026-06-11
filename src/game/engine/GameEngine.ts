@@ -12,6 +12,7 @@ import { ItemSystem } from '../systems/ItemSystem';
 import { ItemType } from '@/types/items';
 import { Language, t } from '@/i18n/translations';
 import { BoardGraph } from '../board/BoardGraph';
+import { BOARD_WORLD_SIZE } from '../board/BoardLayout';
 import { BoardConfigLoader } from '../board/BoardConfigLoader';
 import defaultBoardJson from '../board/boards/default.board.json';
 
@@ -144,11 +145,10 @@ export class GameEngine {
     // Initialize problem pool
     const { pool } = ProblemSystem.initializeProblemPool(this.state.importedProblems || null);
 
-    // Build board graph (doubly-linked tile structure).
-    // Uses a default pixel size — the rendering layer will rebuild
-    // at the actual viewport size. This instance is for game logic only.
-    this._boardGraph = BoardGraph.fromLayout(863, tiles, boardConfig);
-    this._boardGraph.syncSlotsFromPlayers(players);
+    // Build board graph (doubly-linked tile structure). This instance
+    // drives game logic (traversal); the rendering layer builds its own
+    // for layout and pawn-slot placement.
+    this._boardGraph = BoardGraph.fromLayout(BOARD_WORLD_SIZE, tiles, boardConfig);
 
     this.setState({
       screen: GameScreen.Playing,
@@ -294,11 +294,6 @@ export class GameEngine {
     if (!nextTile) return false;
 
     const newPosition = nextTile.index;
-
-    // Update pawn slots
-    const oldTile = this._boardGraph.getTileByIndex(oldPosition);
-    if (oldTile) this._boardGraph.releaseSlot(oldTile.id, playerId);
-    this._boardGraph.claimSlot(nextTile.id, playerId);
 
     this.updatePlayer(playerId, { ...player, position: newPosition });
 
