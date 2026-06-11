@@ -31,17 +31,15 @@ export class BoardSystem {
 
     // Map from config tile id → newTiles index, for modifier resolution
     const idToNewIndex = new Map<string, number>();
-    let gameIndex = 0;
 
-    for (let i = 0; i < config.tiles.length; i++) {
-      const tileConfig = config.tiles[i];
+    for (const tileConfig of config.tiles) {
       const type = TILE_TYPE_MAP[tileConfig.type];
 
       // Modifiers are not game tiles — skip them (effects applied below)
       if (type === TileType.Modifier) continue;
 
-      const idx = gameIndex++;
-      idToNewIndex.set(tileConfig.id, newTiles.length);
+      const idx = newTiles.length;
+      idToNewIndex.set(tileConfig.id, idx);
 
       if (type === TileType.Regular) {
         // Regular tile — assign math problem

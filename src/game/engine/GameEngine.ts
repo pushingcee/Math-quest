@@ -443,6 +443,24 @@ export class GameEngine {
   }
 
   /**
+   * Build the state update that returns the active (unanswered) problem
+   * to the pool so it can reappear, clearing the active id.
+   */
+  private returnActiveProblemToPool(): Partial<GameState> {
+    const { activeProblemId, importedProblems, problemPool } = this.state;
+    const update: Partial<GameState> = { activeProblemId: null };
+
+    if (activeProblemId !== null) {
+      const sourceProblem = importedProblems?.problems.find(p => p.id === activeProblemId);
+      if (sourceProblem) {
+        update.problemPool = [...problemPool, sourceProblem];
+      }
+    }
+
+    return update;
+  }
+
+  /**
    * Submit an answer
    */
   submitAnswer(userAnswer: number, language: Language = 'en'): boolean {
@@ -473,7 +491,7 @@ export class GameEngine {
     }
 
     // Update problem pool based on correctness
-    const { activeProblemId, importedProblems, correctlyAnsweredProblemIds, problemPool } = this.state;
+    const { activeProblemId, importedProblems, correctlyAnsweredProblemIds } = this.state;
     let poolUpdate: Partial<GameState> = { activeProblemId: null };
 
     if (activeProblemId !== null) {
@@ -491,11 +509,7 @@ export class GameEngine {
           return result.correct;
         }
       } else {
-        // Return problem to pool so it can reappear
-        const sourceProblem = importedProblems?.problems.find(p => p.id === activeProblemId);
-        if (sourceProblem) {
-          poolUpdate.problemPool = [...problemPool, sourceProblem];
-        }
+        poolUpdate = this.returnActiveProblemToPool();
       }
     }
 
@@ -533,18 +547,9 @@ export class GameEngine {
     let updatedPlayer = ScoringSystem.applyScoreChange(player, result.scoreChange);
     updatedPlayer = PlayerSystem.updatePlayerStreak(updatedPlayer, 0);
 
-    // Return timed-out problem to pool so it can reappear
-    const { activeProblemId, importedProblems, problemPool } = this.state;
-    let poolUpdate: Partial<GameState> = { activeProblemId: null };
-    if (activeProblemId !== null) {
-      const sourceProblem = importedProblems?.problems.find(p => p.id === activeProblemId);
-      if (sourceProblem) {
-        poolUpdate.problemPool = [...problemPool, sourceProblem];
-      }
-    }
-
     this.updatePlayer(this.state.currentPlayer, updatedPlayer, {
-      ...poolUpdate,
+      // Return the timed-out problem to the pool so it can reappear
+      ...this.returnActiveProblemToPool(),
       mathProblem: null,
       message: {
         text: result.message,
