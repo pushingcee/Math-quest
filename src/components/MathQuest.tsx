@@ -11,7 +11,7 @@ import { ItemType, ITEM_CATALOG } from '@/types/items';
 import { assetPath } from '@/utils/assetPath';
 import { ItemSystem } from '@/game/systems/ItemSystem';
 import { DevTools } from '@/game/debug/devtools';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useGameState } from '@/contexts/GameStateContext';
 import { t } from '@/i18n/translations';
 import GameSetup from './GameSetup';

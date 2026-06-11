@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { LocalUploadProvider } from '@/game/providers/LocalUploadProvider';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
 
 interface ProblemUploadProps {

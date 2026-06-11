@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Player } from '@/types/game';
 import { ItemType, ITEM_CATALOG } from '@/types/items';
 import { ItemSystem } from '@/game/systems/ItemSystem';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
 
 interface ShopDrawerProps {

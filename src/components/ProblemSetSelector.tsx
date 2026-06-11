@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { PersistedSetProvider } from '@/game/providers/PersistedSetProvider';
 import { ProblemSetMeta } from '@/game/providers/types';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
 
 interface ProblemSetSelectorProps {

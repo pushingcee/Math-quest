@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { GameSetupOptions } from '@/game/engine/GameState';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
 import LanguageSelector from './LanguageSelector';
 import { LocalUploadProvider } from '@/game/providers/LocalUploadProvider';

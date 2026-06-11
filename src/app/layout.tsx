@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Libre_Baskerville, Source_Sans_3 } from "next/font/google";
-import { LanguageProvider } from "@/context/LanguageContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { GameStateProvider } from "@/contexts/GameStateContext";
 import NavBar from "@/components/NavBar";
 import "./globals.css";

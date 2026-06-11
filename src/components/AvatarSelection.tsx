@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { playerSprites } from './PlayerSprites';
 import { colorizePlayerSprite } from '@/game/utils/svgColorizer';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n/translations';
 import { PLAYER_COLOR_OPTIONS, AVATAR_DEFAULT_COLORS } from '@/game/constants/colors';
 
