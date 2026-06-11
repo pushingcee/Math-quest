@@ -6,7 +6,7 @@ import { Player, GameScreen } from '@/types/game';
 import { ImportedProblemsData } from '@/types/imported-problems';
 import { TileLandingResult } from '@/game/constants/enums';
 import { GameEngine } from '@/game/engine/GameEngine';
-import { GameState } from '@/game/engine/GameState';
+import { GameState, GameSetupOptions } from '@/game/engine/GameState';
 import { ItemType, ITEM_CATALOG } from '@/types/items';
 import { assetPath } from '@/utils/assetPath';
 import { ItemSystem } from '@/game/systems/ItemSystem';
@@ -161,17 +161,10 @@ export default function MathQuest() {
   const handleStartGame = useCallback((
     playerCount: number,
     problems?: ImportedProblemsData,
-    negativePoints?: boolean,
-    enableTimer?: boolean,
-    timerValue?: number,
-    autoClose?: boolean
+    options?: GameSetupOptions
   ) => {
-    engine.startAvatarSelection(playerCount, problems, {
-      negativePointsEnabled: negativePoints !== undefined ? negativePoints : true,
-      timerEnabled: enableTimer !== undefined ? enableTimer : false,
-      timerDuration: timerValue !== undefined ? timerValue : 30,
-      autoCloseModal: autoClose !== undefined ? autoClose : true,
-    });
+    // Engine merges options over the defaults in createInitialState
+    engine.startAvatarSelection(playerCount, problems, options);
   }, [engine]);
 
   const handleSelectAvatar = useCallback((avatarIndex: number, color: string) => {

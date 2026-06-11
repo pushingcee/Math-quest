@@ -13,6 +13,12 @@ export interface GameConfig {
   boardConfig?: BoardConfig;
 }
 
+/** Game options configurable from the setup screen */
+export type GameSetupOptions = Pick<
+  GameConfig,
+  'negativePointsEnabled' | 'timerEnabled' | 'timerDuration' | 'autoCloseModal'
+>;
+
 export interface GameMessage {
   text: string;
   type: MessageType;

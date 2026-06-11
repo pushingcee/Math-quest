@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { ImportedProblemsData } from '@/types/imported-problems';
+import { GameSetupOptions } from '@/game/engine/GameState';
 import { useLanguage } from '@/context/LanguageContext';
 import { t } from '@/i18n/translations';
 import LanguageSelector from './LanguageSelector';
@@ -14,7 +15,7 @@ const FF_UPLOAD = process.env.NEXT_PUBLIC_FF_UPLOAD_PROBLEMS !== 'false';
 const FF_PERSISTED = process.env.NEXT_PUBLIC_FF_PERSISTED_PROBLEM_SETS === 'true';
 
 interface GameSetupProps {
-  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, negativePoints?: boolean, timerEnabled?: boolean, timerValue?: number, autoCloseModal?: boolean) => void;
+  onStart: (playerCount: number, importedProblems?: ImportedProblemsData, options?: GameSetupOptions) => void;
 }
 
 const fieldStyle: React.CSSProperties = {
@@ -78,7 +79,12 @@ export default function GameSetup({ onStart }: GameSetupProps) {
 
   const handleStart = () => {
     const validTimerValue = typeof timerValue === 'string' ? parseInt(timerValue) || 30 : timerValue;
-    onStart(playerCount, importedProblems || undefined, negativePoints, timerEnabled, validTimerValue, autoCloseModal);
+    onStart(playerCount, importedProblems || undefined, {
+      negativePointsEnabled: negativePoints,
+      timerEnabled,
+      timerDuration: validTimerValue,
+      autoCloseModal,
+    });
   };
 
   return (
