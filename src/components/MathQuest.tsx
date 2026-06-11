@@ -178,15 +178,13 @@ export default function MathQuest() {
     negativePoints?: boolean,
     enableTimer?: boolean,
     timerValue?: number,
-    autoClose?: boolean,
-    displayProblemsInTiles?: boolean
+    autoClose?: boolean
   ) => {
     engine.startAvatarSelection(playerCount, problems, {
       negativePointsEnabled: negativePoints !== undefined ? negativePoints : true,
       timerEnabled: enableTimer !== undefined ? enableTimer : false,
       timerDuration: timerValue !== undefined ? timerValue : 30,
       autoCloseModal: autoClose !== undefined ? autoClose : true,
-      displayProblemsInTiles: displayProblemsInTiles !== undefined ? displayProblemsInTiles : true,
     });
   }, [engine]);
 

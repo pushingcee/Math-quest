@@ -9,9 +9,7 @@ export interface GameConfig {
   timerEnabled: boolean;
   timerDuration: number;
   autoCloseModal: boolean;
-  displayProblemsInTiles: boolean;
   maxRounds: number;
-  boardSize: number;
   boardConfig?: BoardConfig;
 }
 
@@ -80,7 +78,7 @@ export interface GameState {
   pendingItemUse: {
     playerId: number;
     itemType: ItemType;
-    context: 'obstacle' | 'dice' | 'math' | 'teleport';
+    context: 'dice' | 'teleport';
   } | null;
 
   // Teleporter
@@ -115,9 +113,7 @@ export const createInitialState = (): GameState => ({
     timerEnabled: false,
     timerDuration: 30,
     autoCloseModal: true,
-    displayProblemsInTiles: true,
     maxRounds: 10,
-    boardSize: 40,
   },
   message: null,
   bannerMessage: null,

@@ -76,10 +76,6 @@ export class BoardGraph {
 
   // ── Queries ──────────────────────────────────────────────
 
-  getTileById(id: string): BoardTileNode | null {
-    return this.tilesById.get(id) ?? null;
-  }
-
   getTileByIndex(index: number): BoardTileNode | null {
     return this.tilesByIndex.get(index) ?? null;
   }
@@ -87,20 +83,6 @@ export class BoardGraph {
   /** All tiles including corners (for rendering). */
   getAllTiles(): BoardTileNode[] {
     return Array.from(this.tilesById.values());
-  }
-
-  /** Only tiles in the traversal chain (no corners). */
-  getTraversableTiles(): BoardTileNode[] {
-    if (!this.head) return [];
-
-    const result: BoardTileNode[] = [];
-    let current: BoardTileNode | null = this.head;
-    do {
-      result.push(current);
-      current = current.next;
-    } while (current && current !== this.head);
-
-    return result;
   }
 
   /** Modifier overlays (for rendering, not game tiles). */
@@ -246,47 +228,4 @@ export class BoardGraph {
     }
   }
 
-  // ── Dynamic Board Manipulation ───────────────────────────
-
-  /**
-   * Remove a tile from the traversal chain.
-   * The tile stays in allTiles for rendering but movement skips it.
-   */
-  unlinkTile(tileId: string): void {
-    const tile = this.tilesById.get(tileId);
-    if (!tile || !tile.prev || !tile.next) return;
-
-    // If this is the head, move head forward
-    if (tile === this.head) {
-      this.head = tile.next !== tile ? tile.next : null;
-    }
-
-    // Stitch neighbors together
-    tile.prev.next = tile.next;
-    tile.next.prev = tile.prev;
-
-    // Disconnect this tile from the chain
-    tile.next = null;
-    tile.prev = null;
-  }
-
-  /**
-   * Re-insert a tile into the traversal chain after a given tile.
-   */
-  relinkTile(tileId: string, afterTileId: string): void {
-    const tile = this.tilesById.get(tileId);
-    const after = this.tilesById.get(afterTileId);
-    if (!tile || !after || !after.next) return;
-
-    // Already linked — unlink first
-    if (tile.next || tile.prev) {
-      this.unlinkTile(tileId);
-    }
-
-    const before = after.next;
-    after.next = tile;
-    tile.prev = after;
-    tile.next = before;
-    before.prev = tile;
-  }
 }

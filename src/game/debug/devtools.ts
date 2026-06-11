@@ -209,24 +209,6 @@ export class DevTools {
   }
 
   /**
-   * Skip to game over screen
-   */
-  skipToGameOver() {
-    const state = this.engine.getState();
-    const players = state.players;
-
-    // Find the player with highest score
-    const winner = players.reduce((prev, current) =>
-      prev.score > current.score ? prev : current
-    );
-
-    console.log(`Ending game - ${winner.name} wins with ${winner.score} points!`);
-
-    // We'd need to expose endGame in GameEngine for this to work properly
-    console.warn('Game over screen requires GameEngine.endGame() method to be exposed');
-  }
-
-  /**
    * Print available debug commands
    */
   help() {

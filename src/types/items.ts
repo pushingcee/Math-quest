@@ -5,15 +5,6 @@ export enum ItemType {
   Teleport = 'teleport',
 }
 
-export enum ItemTrigger {
-  Manual = 'manual',
-  OnTrap = 'onTrap',
-  OnSlip = 'onSlip',
-  OnObstacle = 'onObstacle',
-  BeforeDice = 'beforeDice',
-  OnMathProblem = 'onMathProblem',
-}
-
 export interface ItemDefinition {
   id: ItemType;
   name: string;
@@ -21,14 +12,12 @@ export interface ItemDefinition {
   emoji: string;
   price: number;
   maxUses: number;
-  trigger: ItemTrigger;
   stackable: boolean;
 }
 
 export interface PlayerItem {
   itemType: ItemType;
   usesRemaining: number;
-  isActive?: boolean;
 }
 
 export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
@@ -39,7 +28,6 @@ export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
     emoji: '🛡️',
     price: 45,
     maxUses: 1,
-    trigger: ItemTrigger.OnObstacle,
     stackable: true,
   },
   [ItemType.ExtraDiceRoll]: {
@@ -49,7 +37,6 @@ export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
     emoji: '🎲',
     price: 60,
     maxUses: 3,
-    trigger: ItemTrigger.BeforeDice,
     stackable: false,
   },
   [ItemType.PointMultiplier]: {
@@ -59,7 +46,6 @@ export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
     emoji: '⭐',
     price: 75,
     maxUses: 2,
-    trigger: ItemTrigger.OnMathProblem,
     stackable: false,
   },
   [ItemType.Teleport]: {
@@ -69,7 +55,6 @@ export const ITEM_CATALOG: Record<ItemType, ItemDefinition> = {
     emoji: '🌀',
     price: 90,
     maxUses: 1,
-    trigger: ItemTrigger.Manual,
     stackable: true,
   },
 };

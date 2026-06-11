@@ -117,7 +117,6 @@ interface CanvasContentProps {
   onMoveSelectedTiles: (anchorId: string, newRow: number, newCol: number, offsets: GroupOffset[]) => void;
   onResolveConnection: (id: string) => void;
   onCancelConnectMode: () => void;
-  viewportSize: number;
 }
 
 function WorldBuilderCanvasContent({
@@ -129,7 +128,6 @@ function WorldBuilderCanvasContent({
   onMoveSelectedTiles,
   onResolveConnection,
   onCancelConnectMode,
-  viewportSize,
 }: CanvasContentProps) {
   const { tiles, selectedTileIds, connectMode, activePalette, gridCols, gridRows } = editorState;
 
@@ -615,7 +613,6 @@ export default function WorldBuilderCanvas({
           onMoveSelectedTiles={onMoveSelectedTiles}
           onResolveConnection={onResolveConnection}
           onCancelConnectMode={onCancelConnectMode}
-          viewportSize={WORLD_SIZE}
         />
       </Application>
     </div>

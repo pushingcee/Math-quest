@@ -657,19 +657,6 @@ export class GameEngine {
   // ===== ITEM USAGE ACTIONS =====
 
   /**
-   * Prompt player to use an item
-   */
-  promptItemUse(itemType: ItemType, context: 'obstacle' | 'dice' | 'math' | 'teleport') {
-    this.setState({
-      pendingItemUse: {
-        playerId: this.state.currentPlayer,
-        itemType,
-        context,
-      },
-    });
-  }
-
-  /**
    * Use an item
    */
   useItem(itemType: ItemType): boolean {
